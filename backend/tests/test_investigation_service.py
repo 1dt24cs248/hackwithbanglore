@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import threading
 import unittest
 import uuid
 from datetime import datetime, timezone
@@ -158,6 +159,24 @@ class InvestigationServiceTests(unittest.IsolatedAsyncioTestCase):
         run = self.session.get(InvestigationRun, result.investigation_id)
         self.assertEqual(run.execution_status, "succeeded")
         self.assertEqual(run.recalled_memory_refs, [])
+
+    async def test_sync_groq_analysis_runs_off_the_async_event_loop_thread(self) -> None:
+        event_loop_thread = threading.get_ident()
+        analysis_threads: list[int] = []
+        analyze = self.ai.analyze_incident
+
+        def track_analysis(context):
+            analysis_threads.append(threading.get_ident())
+            return analyze(context)
+
+        with patch.object(self.ai, "analyze_incident", side_effect=track_analysis):
+            result = await self.service.run_investigation(
+                self.incident_id, {"memory_mode": "off"}
+            )
+
+        self.assertEqual(result.execution_status, "succeeded")
+        self.assertEqual(len(analysis_threads), 1)
+        self.assertNotEqual(analysis_threads[0], event_loop_thread)
 
     async def test_memory_on_invokes_existing_recall_service_then_groq(self) -> None:
         self.hindsight_sdk.arecall.return_value = RecallResponse(

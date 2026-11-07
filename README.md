@@ -94,7 +94,7 @@ npm ci
 npm run dev
 ```
 
-The Vite development server listens on `http://127.0.0.1:5174`. The frontend defaults to the API at `http://127.0.0.1:8001/api`. For a different backend URL, set `VITE_API_BASE_URL` before starting Vite. Do not put secrets in `VITE_*` variables.
+The Vite development server listens on `http://127.0.0.1:5173` (it can use 5174 or 5175 if the port is occupied; the backend CORS list allows those local ports). The frontend defaults to the API at `http://127.0.0.1:8001/api`. For a different backend URL, set `VITE_API_BASE_URL` before starting Vite. Do not put secrets in `VITE_*` variables.
 
 ## Tests and production build
 

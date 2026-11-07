@@ -57,10 +57,32 @@ def get_investigation_service(
 
 def _fail(error: InvestigationServiceError) -> HTTPException:
     category = error.category
+    provider_category = category.split("_", 1)[1] if "_" in category else "provider_error"
+    if provider_category not in {
+        "authentication_error", "network_error", "connection_error", "timeout",
+        "rate_limited", "provider_error", "sdk_error", "client_unavailable",
+        "invalid_input", "service_unavailable", "service_error", "not_configured",
+        "model_unavailable", "malformed_response", "api_error",
+    }:
+        provider_category = "provider_error"
     if category in {"incident_not_found", "investigation_not_found", "recommendation_not_found"}:
         return HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Requested resource was not found."})
-    if category in {"hindsight_client_unavailable", "groq_not_configured", "groq_error"} or category.startswith(("hindsight_", "groq_")):
-        return HTTPException(status_code=503, detail={"code": "DEPENDENCY_UNAVAILABLE", "message": "An investigation dependency is unavailable."})
+    if category.startswith("hindsight_"):
+        message = f"Hindsight recall failed ({provider_category})."
+        return HTTPException(status_code=503, detail={
+            "code": "HINDSIGHT_UNAVAILABLE",
+            "message": message,
+            "error_category": f"hindsight_{provider_category}",
+            "investigation_id": str(error.run_id) if error.run_id else None,
+        })
+    if category.startswith("groq_"):
+        message = f"Groq analysis failed ({provider_category})."
+        return HTTPException(status_code=503, detail={
+            "code": "GROQ_UNAVAILABLE",
+            "message": message,
+            "error_category": f"groq_{provider_category}",
+            "investigation_id": str(error.run_id) if error.run_id else None,
+        })
     if category == "database_error":
         return HTTPException(status_code=503, detail={"code": "DATABASE_UNAVAILABLE", "message": "The database operation could not be completed."})
     if category == "engineer_confirmation_required":
@@ -120,7 +142,12 @@ def list_incidents(
 @router.get("/incidents/{incident_id}")
 def get_incident(incident_id: uuid.UUID, session: Session = Depends(get_db)) -> dict[str, Any]:
     incident = session.scalar(
-        select(Incident).options(selectinload(Incident.logs), selectinload(Incident.deployments), selectinload(Incident.verified_resolutions)).where(Incident.id == incident_id)
+        select(Incident).options(
+            selectinload(Incident.logs),
+            selectinload(Incident.deployments),
+            selectinload(Incident.verified_resolutions),
+            selectinload(Incident.investigation_runs),
+        ).where(Incident.id == incident_id)
     )
     if incident is None:
         raise _fail(InvestigationServiceError("incident_not_found"))
@@ -158,6 +185,12 @@ def get_incident(incident_id: uuid.UUID, session: Session = Depends(get_db)) -> 
         "logs": [{"id": str(x.id), "log_type": x.log_type, "log_text": x.log_text, "source_system": x.source_system, "created_at": _iso(x.created_at)} for x in incident.logs],
         "deployments": [{"id": str(x.id), "deployment_id": x.deployment_id, "version": x.version, "environment": x.environment, "service_name": x.service_name, "deployed_by": x.deployed_by, "deployed_at": _iso(x.deployed_at), "change_summary": x.change_summary} for x in incident.deployments],
         "verified_resolutions": [{"id": str(x.id), "root_cause_summary": x.root_cause_summary, "resolution_summary": x.resolution_summary, "verified_by": x.verified_by, "verified_at": _iso(x.verified_at), "provenance": "engineer_verified_root_cause"} for x in incident.verified_resolutions],
+        "investigation_runs": [{
+            "id": str(run.id),
+            "memory_mode": run.memory_mode,
+            "execution_status": run.execution_status,
+            "created_at": _iso(run.created_at),
+        } for run in sorted(incident.investigation_runs, key=lambda item: (item.created_at, str(item.id)), reverse=True)],
     })
 
 

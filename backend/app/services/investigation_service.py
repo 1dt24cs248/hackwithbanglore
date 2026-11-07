@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import re
@@ -256,7 +257,7 @@ class InvestigationService:
             update={"historical_memories": historical_memories}
         )
         try:
-            analysis = self._ai.analyze_incident(ai_context)
+            analysis = await asyncio.to_thread(self._ai.analyze_incident, ai_context)
         except AIServiceError as error:
             category = f"groq_{error.category}"
             self._finish_failed_run(run_id, category)
@@ -550,6 +551,14 @@ class InvestigationService:
         category: str,
         memory_event: dict[str, str] | None = None,
     ) -> None:
+        logger.warning(
+            "Investigation run failed",
+            extra={
+                "operation": "investigate",
+                "investigation_id": str(run_id),
+                "failure_category": category,
+            },
+        )
         try:
             run = self._session.get(InvestigationRun, run_id)
             if run is not None:

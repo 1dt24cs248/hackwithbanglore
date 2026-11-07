@@ -7,6 +7,7 @@ import {
   Sparkles, SquareActivity, X,
 } from 'lucide-react'
 import { hindsightBankLabel } from './providerStatus.js'
+import { createPostmortemMarkdownBlob, parsePostmortemMarkdown } from './postmortemMarkdown.js'
 
 const API_ROOT = (import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8001/api').replace(/\/$/, '')
 const DATA_LABEL = import.meta.env.VITE_DATA_LABEL
@@ -67,7 +68,11 @@ async function api(path, options = {}) {
   const body = await response.json().catch(() => ({}))
   if (!response.ok) {
     const message = body?.detail?.message || body?.detail || 'The request could not be completed.'
-    throw new Error(typeof message === 'string' ? message : 'The request could not be completed.')
+    const error = new Error(typeof message === 'string' ? message : 'The request could not be completed.')
+    error.code = body?.detail?.code
+    error.category = body?.detail?.error_category
+    error.resourceId = body?.detail?.investigation_id
+    throw error
   }
   return body?.data ?? body
 }
@@ -92,6 +97,7 @@ function App() {
   const [page, setPage] = useState('dashboard')
   const [mobileNav, setMobileNav] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
+  const [checkingHealth, setCheckingHealth] = useState(false)
   const [toast, setToast] = useState(null)
   const [dashboard, setDashboard] = useState(null)
   const [incidents, setIncidents] = useState([])
@@ -107,12 +113,23 @@ function App() {
     window.setTimeout(() => setToast(null), 4200)
   }, [])
 
+  const refreshHealth = useCallback(async () => {
+    setCheckingHealth(true)
+    try {
+      setHealth(await api('/health'))
+    } catch {
+      setHealth({ application: 'unavailable', dependencies: {} })
+    } finally {
+      setCheckingHealth(false)
+    }
+  }, [])
+
   const reload = useCallback(async () => {
     setRefreshing(true)
     setLoadError('')
-    const [summary, list, memory, status] = await Promise.allSettled([
+    const [summary, list, memory] = await Promise.allSettled([
       api('/dashboard/summary'), api('/incidents?page=1&limit=30'),
-      api('/memory/activity?limit=8'), api('/health'),
+      api('/memory/activity?limit=8'),
     ])
     if (summary.status === 'fulfilled') setDashboard(summary.value)
     if (list.status === 'fulfilled') {
@@ -121,13 +138,12 @@ function App() {
       setSelectedIncidentId((current) => current || items[0]?.id || '')
     }
     if (memory.status === 'fulfilled') setMemoryActivity(memory.value.items || [])
-    if (status.status === 'fulfilled') setHealth(status.value)
     const failures = [summary, list].filter((item) => item.status === 'rejected')
     if (failures.length) setLoadError(failures[0].reason.message)
     setRefreshing(false)
   }, [])
 
-  useEffect(() => { reload() }, [reload])
+  useEffect(() => { reload(); refreshHealth() }, [reload, refreshHealth])
   useEffect(() => { try { window.localStorage.setItem(DEMO_STORAGE_KEY, JSON.stringify(demo)) } catch { /* Demo progress is a convenience; the backend remains authoritative. */ } }, [demo])
 
   const selectedIncident = useMemo(
@@ -152,10 +168,10 @@ function App() {
       <aside className={`sidebar ${mobileNav ? 'sidebar-open' : ''}`}>
         <div className="brand-lockup">
           <div className="brand-mark"><Network size={19} strokeWidth={2.2} /></div>
-          <div><div className="brand-name">incident<span>iq</span></div><div className="brand-caption">PRODUCTION INTELLIGENCE</div></div>
+          <div><div className="brand-name">incident<span>iq</span></div><div className="brand-caption">INCIDENT RESPONSE</div></div>
           <button className="icon-button sidebar-close" aria-label="Close navigation" onClick={() => setMobileNav(false)}><X size={17} /></button>
         </div>
-        <div className="workspace-switch"><div className="workspace-symbol">N</div><div className="workspace-copy"><strong>Northstar Systems</strong><span>Production workspace</span></div><ChevronDown size={15} /></div>
+        <div className="workspace-label"><span className="workspace-symbol"><Database size={14}/></span><div className="workspace-copy"><strong>Local workspace</strong><span>Current API data</span></div></div>
         <nav className="side-nav" aria-label="Primary navigation">
           {['Workspace', 'Intelligence'].map((group) => <div className="nav-group" key={group}>
             <div className="nav-label">{group}</div>
@@ -164,8 +180,8 @@ function App() {
           <div className="nav-group"><div className="nav-label">Demo</div><button className={`nav-item ${page === 'compare' ? 'active' : ''}`} onClick={() => { setPage('compare'); setMobileNav(false) }}><Layers3 size={17} /><span>Memory comparison</span><span className="live-dot" /></button></div>
         </nav>
         <div className="sidebar-bottom">
-          <div className="memory-promo"><div className="promo-icon"><BrainCircuit size={17} /></div><div><strong>Learning loop</strong><p>Verified outcomes become tomorrow’s context.</p></div><ArrowRight size={15} /></div>
-          <div className="user-profile"><div className="avatar">SE</div><div className="profile-copy"><strong>SRE Engineering</strong><span>Incident response team</span></div><ChevronDown size={14} /></div>
+          <button className="memory-promo" onClick={() => { setPage('investigate'); setMobileNav(false) }}><div className="promo-icon"><BrainCircuit size={17} /></div><div><strong>Hindsight learning loop</strong><p>Open the verified learning workflow.</p></div><ArrowRight size={15} /></button>
+          <div className="user-profile"><div className="avatar"><ShieldCheck size={15}/></div><div className="profile-copy"><strong>Local session</strong><span>Unauthenticated</span></div></div>
         </div>
       </aside>
       {mobileNav && <button className="nav-scrim" aria-label="Close navigation" onClick={() => setMobileNav(false)} />}
@@ -173,26 +189,26 @@ function App() {
       <main className="main-shell">
         <header className="topbar">
           <div className="topbar-left"><button className="icon-button mobile-menu" aria-label="Open navigation" onClick={() => setMobileNav(true)}><Menu size={19} /></button><div className="breadcrumb">Workspace <ChevronRight size={14} /> <strong>{navItems.find((item) => item.id === page)?.label || (page === 'compare' ? 'Memory comparison' : 'Postmortems')}</strong></div></div>
-          <div className="topbar-actions"><div className="topbar-status"><span className={`status-pulse ${health?.application === 'available' ? '' : 'status-unknown'}`} />{health?.application === 'available' ? 'API reachable' : health ? 'API unavailable' : 'Checking API'} <span className="status-divider" /> <span className="topbar-env">PRODUCTION</span></div><button className="icon-button" title="Refresh data" onClick={reload} disabled={refreshing}><RefreshCw size={16} className={refreshing ? 'spin' : ''} /></button><div className="top-avatar">SE</div></div>
+          <div className="topbar-actions"><div className="topbar-status"><span className={`status-pulse ${health?.application === 'available' ? '' : 'status-unknown'}`} />{health?.application === 'available' ? 'API reachable' : health ? 'API unavailable' : 'Checking API'} <span className="status-divider" /> <span className="topbar-env">LOCAL API</span></div><button className="icon-button" title="Refresh data" onClick={reload} disabled={refreshing}><RefreshCw size={16} className={refreshing ? 'spin' : ''} /></button></div>
         </header>
 
         <div className="content-wrap">
           {DATA_LABEL && <div className="test-data-banner"><CircleHelp size={14}/><span>{DATA_LABEL}</span></div>}
           {loadError && <div className="alert alert-error"><AlertCircle size={17} /><span>{loadError}</span><button onClick={reload}>Retry</button></div>}
-          {page === 'dashboard' && <DashboardPage dashboard={dashboard} incidents={incidents} activities={memoryActivity} health={health} recentRuns={recentRuns} onOpenIncident={(id) => { setSelectedIncidentId(id); setPage('investigate') }} onNavigate={setPage} loading={refreshing} />}
+          {page === 'dashboard' && <DashboardPage dashboard={dashboard} incidents={incidents} activities={memoryActivity} health={health} recentRuns={recentRuns} onOpenIncident={(id) => { setSelectedIncidentId(id); setPage('investigate') }} onNavigate={setPage} loading={refreshing} onRefreshHealth={refreshHealth} checkingHealth={checkingHealth} />}
           {page === 'investigate' && <InvestigationPage incidents={incidents} selectedIncidentId={selectedIncidentId} setSelectedIncidentId={setSelectedIncidentId} selectedIncident={selectedIncident} onIncidentCreated={(id) => { setSelectedIncidentId(id); reload() }} onRunCreated={onRunCreated} notify={notify} demo={demo} setDemo={setDemo} onDataChanged={reload} />}
           {page === 'compare' && <ComparisonPage incidents={incidents} selectedIncidentId={selectedIncidentId} setSelectedIncidentId={setSelectedIncidentId} selectedIncident={selectedIncident} onRunCreated={onRunCreated} notify={notify} />}
           {page === 'memory' && <MemoryPage incidents={incidents} selectedIncidentId={selectedIncidentId} setSelectedIncidentId={setSelectedIncidentId} onNavigate={setPage} health={health} />}
           {page === 'postmortem' && <PostmortemPage incidents={incidents} notify={notify} onNavigate={setPage} />}
         </div>
-        <footer className="footer"><span>INCIDENTIQ <span className="footer-separator">/</span> Every incident teaches the next investigation.</span><span>Evidence first. Engineer verified.</span></footer>
+        <footer className="footer"><span>INCIDENTIQ <span className="footer-separator">/</span> Local operational data</span><span>Verified resolutions are retained in Hindsight.</span></footer>
       </main>
       {toast && <div className={`toast toast-${toast.kind}`} role="status">{toast.kind === 'success' ? <CheckCircle2 size={17} /> : <AlertCircle size={17} />}{toast.message}<button onClick={() => setToast(null)} aria-label="Dismiss"><X size={15} /></button></div>}
     </div>
   )
 }
 
-function DashboardPage({ dashboard, incidents, activities, health, recentRuns, onOpenIncident, onNavigate, loading }) {
+function DashboardPage({ dashboard, incidents, activities, health, recentRuns, onOpenIncident, onNavigate, loading, onRefreshHealth, checkingHealth }) {
   const cards = [
     { label: 'Total incidents', value: dashboard?.total_incidents, icon: SquareActivity, tone: 'cyan', foot: 'Across this workspace' },
     { label: 'Open incidents', value: dashboard?.open_incidents, icon: Activity, tone: 'violet', foot: 'Awaiting investigation' },
@@ -202,18 +218,18 @@ function DashboardPage({ dashboard, incidents, activities, health, recentRuns, o
   const severities = ['critical', 'high', 'medium', 'low']
   const total = dashboard?.total_incidents || 0
   return <>
-    <PageHeading eyebrow={formatLongDate()} title={<>Operations, in focus <span className="heading-wave">✳</span></>} subtitle="Your production intelligence, at a glance." action={<button className="button button-primary" onClick={() => onNavigate('investigate')}><Plus size={16} /> New investigation</button>} />
+    <PageHeading eyebrow={formatLongDate()} title="Incident overview" subtitle="Current incident and integration status from the local API." action={<button className="button button-primary" onClick={() => onNavigate('investigate')}><Plus size={16} /> New investigation</button>} />
     <section className="metric-grid" aria-label="Incident statistics">
-      {cards.map(({ label, value, icon: Icon, tone, foot }, index) => <article className={`metric-card metric-${tone}`} key={label} style={{ '--delay': `${index * 55}ms` }}><div className="metric-top"><div className={`metric-icon ${tone}`}><Icon size={17} /></div><span className="metric-period">LIVE</span></div><div className="metric-value">{loading && value == null ? <span className="skeleton skeleton-number" /> : value ?? '—'}</div><div className="metric-bottom"><strong>{label}</strong><span>{foot}</span></div></article>)}
+      {cards.map(({ label, value, icon: Icon, tone, foot }, index) => <article className={`metric-card metric-${tone}`} key={label} style={{ '--delay': `${index * 55}ms` }}><div className="metric-top"><div className={`metric-icon ${tone}`}><Icon size={17} /></div><span className="metric-period">CURRENT</span></div><div className="metric-value">{loading && value == null ? <span className="skeleton skeleton-number" /> : value ?? '—'}</div><div className="metric-bottom"><strong>{label}</strong><span>{foot}</span></div></article>)}
     </section>
     <section className="overview-grid">
-      <article className="panel severity-panel"><div className="panel-heading"><div><div className="section-kicker">INCIDENT LANDSCAPE</div><h2>Severity distribution</h2></div><span className="panel-period"><span className="live-dot" /> Live data</span></div>
+      <article className="panel severity-panel"><div className="panel-heading"><div><div className="section-kicker">INCIDENT LANDSCAPE</div><h2>Severity distribution</h2></div><span className="panel-period">API snapshot</span></div>
         {total ? <div className="severity-content"><div className="severity-ring" style={{ '--critical': `${(dashboard.severity_distribution.critical / total) * 100}%`, '--high': `${(dashboard.severity_distribution.high / total) * 100}%`, '--medium': `${(dashboard.severity_distribution.medium / total) * 100}%`, '--low': `${(dashboard.severity_distribution.low / total) * 100}%` }}><div className="ring-center"><strong>{total}</strong><span>INCIDENTS</span></div></div><div className="severity-legend">{severities.map((severity) => { const count = dashboard?.severity_distribution?.[severity] || 0; return <div className="severity-row" key={severity}><span className={`severity-dot ${severity}`} /><span className="severity-name">{severity}</span><div className="severity-track"><div className={`severity-fill ${severity}`} style={{ width: `${Math.max((count / total) * 100, count ? 3 : 0)}%` }} /></div><strong>{count}</strong></div> })}</div></div> : <EmptyState icon={Radar} title="No incident signals yet" copy="Once incidents are submitted, severity distribution will appear here." action={<button className="text-button" onClick={() => onNavigate('investigate')}>Submit your first incident <ArrowRight size={14} /></button>} />}
       </article>
-      <article className="panel system-panel"><div className="panel-heading"><div><div className="section-kicker">PLATFORM STATUS</div><h2>Intelligence services</h2></div><span className="live-indicator"><span className="status-pulse" /> Live</span></div><div className="service-list">{serviceRows(health).map((item) => <ServiceRow key={item.label} {...item} />)}</div><div className="system-note"><CircleHelp size={14} /><span>Dependencies are checked when used. “Not checked” isn’t a health assertion.</span></div></article>
+      <article className="panel system-panel"><div className="panel-heading"><div><div className="section-kicker">PLATFORM STATUS</div><h2>Intelligence services</h2></div><button className="text-button" onClick={onRefreshHealth} disabled={checkingHealth}>{checkingHealth ? 'Checking…' : 'Re-check integrations'}</button></div><div className="service-list">{serviceRows(health).map((item) => <ServiceRow key={item.label} {...item} />)}</div><div className="system-note"><CircleHelp size={14} /><span>Provider checks run at startup or when requested; data refreshes do not call providers.</span></div></article>
     </section>
     <section className="dashboard-lower">
-      <article className="panel incidents-panel"><div className="panel-heading"><div><div className="section-kicker">LIVE OPERATIONS</div><h2>Recent incidents <span className="inline-count">{incidents.length}</span></h2></div><button className="text-button" onClick={() => onNavigate('investigate')}>View investigations <ArrowRight size={14} /></button></div>
+      <article className="panel incidents-panel"><div className="panel-heading"><div><div className="section-kicker">RECENT INCIDENTS</div><h2>Recent incidents <span className="inline-count">{incidents.length}</span></h2></div><button className="text-button" onClick={() => onNavigate('investigate')}>View investigations <ArrowRight size={14} /></button></div>
         {incidents.length ? <div className="incident-table-wrap"><table className="incident-table"><thead><tr><th>Incident</th><th>Service</th><th>Severity</th><th>Status</th><th>Reported</th><th></th></tr></thead><tbody>{incidents.slice(0, 6).map((incident) => <tr key={incident.id} onClick={() => onOpenIncident(incident.id)}><td><div className="incident-title-cell"><span className="incident-ref">{incident.incident_number}</span><strong>{incident.title}</strong></div></td><td><span className="service-name"><span className="service-glyph">{incident.service_name?.slice(0, 1).toUpperCase()}</span>{incident.service_name}</span></td><td><SeverityBadge value={incident.severity} /></td><td><StatusBadge value={incident.status} /></td><td className="date-cell">{formatRelative(incident.created_at)}</td><td><ChevronRight size={15} className="row-chevron" /></td></tr>)}</tbody></table></div> : <EmptyState icon={SquareActivity} title="Your incident queue is clear" copy="New incidents submitted to the API will appear here." action={<button className="button button-secondary button-small" onClick={() => onNavigate('investigate')}><Plus size={14} /> Create incident</button>} />}
       </article>
       <div className="activity-column">
@@ -230,6 +246,7 @@ function serviceRows(health) {
     const item = deps[key]
     if (!item) return ['Unknown', 'neutral', 'Status unavailable']
     if (item.status === 'connected') return ['Connected', 'good', 'Connection checked successfully']
+    if (item.status === 'reachable' || item.reachable === true) return ['Reachable', 'good', 'Provider check succeeded']
     if (item.status === 'unavailable') return ['Unavailable', 'bad', 'Last connection check failed']
     if (item.configured) return ['Configured', 'neutral', 'Checked when the service is used']
     return ['Not configured', 'neutral', 'Optional configuration is missing']
@@ -255,14 +272,58 @@ function InvestigationPage({ incidents, selectedIncidentId, setSelectedIncidentI
   const [detail, setDetail] = useState(null)
   const [demoBusy, setDemoBusy] = useState('')
   const [demoError, setDemoError] = useState('')
-  useEffect(() => { if (selectedIncidentId) api(`/incidents/${selectedIncidentId}`).then(setDetail).catch(() => setDetail(null)) }, [selectedIncidentId])
   useEffect(() => {
-    if (selectedIncidentId && detail) {
-      if (detail.id === demo.historicalIncidentId) {
-        setDemo((current) => ({ ...current, historicalRetentionStatus: detail.memory_retention_status }))
-      }
+    let active = true
+    async function restorePersistedDemoProgress() {
+      if (!incidents.length) return
+      try {
+        const firstPage = await api('/incidents?page=1&limit=100')
+        const pages = Math.max(1, Math.ceil((firstPage.total || 0) / 100))
+        for (let page = 1; page <= pages; page += 1) {
+          const listing = page === 1 ? firstPage : await api(`/incidents?page=${page}&limit=100`)
+          const candidate = (listing.items || []).find((item) =>
+            item.title === DEMO_FIXTURES.history.title && item.service_name === DEMO_FIXTURES.history.service_name,
+          )
+          if (!candidate) continue
+          const historical = await api(`/incidents/${candidate.id}`)
+          if (!active) return
+          if (historical.source !== 'synthetic_demo' || historical.environment !== DEMO_FIXTURES.history.environment) return
+          const completedMemoryOffRun = historical.investigation_runs?.find(
+            (run) => run.memory_mode === 'off' && run.execution_status === 'succeeded',
+          )
+          setDemo((current) => ({
+            ...current,
+            historicalIncidentId: historical.id,
+            historicalOffRunId: completedMemoryOffRun?.id || null,
+            historicalRetentionStatus: historical.memory_retention_status || null,
+          }))
+          return
+        }
+      } catch { /* A demo fixture is optional; never create one during page load. */ }
     }
-  }, [selectedIncidentId, detail])
+    restorePersistedDemoProgress()
+    return () => { active = false }
+  }, [incidents])
+  useEffect(() => {
+    let active = true
+    if (!selectedIncidentId) { setDetail(null); return undefined }
+    api(`/incidents/${selectedIncidentId}`).then((loadedDetail) => {
+      if (!active) return
+      setDetail(loadedDetail)
+      if (loadedDetail.source === 'synthetic_demo' && loadedDetail.title === DEMO_FIXTURES.history.title) {
+        const completedMemoryOffRun = loadedDetail.investigation_runs?.find(
+          (run) => run.memory_mode === 'off' && run.execution_status === 'succeeded',
+        )
+        setDemo((current) => ({
+          ...current,
+          historicalIncidentId: loadedDetail.id,
+          historicalOffRunId: completedMemoryOffRun?.id || null,
+          historicalRetentionStatus: loadedDetail.memory_retention_status || null,
+        }))
+      }
+    }).catch(() => { if (active) setDetail(null) })
+    return () => { active = false }
+  }, [selectedIncidentId])
   useEffect(() => { setResult(null); setRunError('') }, [selectedIncidentId])
 
   async function runInvestigation() {
@@ -322,6 +383,7 @@ function InvestigationPage({ incidents, selectedIncidentId, setSelectedIncidentI
     setDemoBusy('history'); setDemoError('')
     try {
       const incident = await getOrCreateSynthetic('history')
+      setShowForm(false)
       setMode('off'); setResult(null); setRunError('')
       onIncidentCreated(incident.id || incident.incident_id)
       notify('success', 'Synthetic historical incident ready. Run MEMORY_OFF, then review and confirm the real simulated resolution.')
@@ -335,6 +397,7 @@ function InvestigationPage({ incidents, selectedIncidentId, setSelectedIncidentI
     try {
       const incident = await getOrCreateSynthetic('followUp')
       const incidentId = incident.id || incident.incident_id
+      setShowForm(false)
       setMode('on'); onIncidentCreated(incidentId)
       const run = await api(`/incidents/${incidentId}/investigate`, { method: 'POST', body: JSON.stringify({ memory_mode: 'MEMORY_ON' }) })
       setResult(run); onRunCreated(run, incident)
@@ -362,12 +425,13 @@ function InvestigationPage({ incidents, selectedIncidentId, setSelectedIncidentI
         <div className={`demo-step ${demo.followUpIncidentId ? 'complete' : ''}`}><span>04</span><div><strong>MEMORY_ON follow-up</strong><small>{demo.followUpIncidentId ? 'Follow-up created' : 'Recall retained history'}</small></div></div>
       </div>
       <div className="guided-demo-actions"><button className="button button-secondary button-small" onClick={openSyntheticHistory} disabled={Boolean(demoBusy || running)}>{demoBusy === 'history' ? <><LoaderCircle size={14} className="spin"/> Loading sample…</> : <><Plus size={14}/> Create / load historical sample</>}</button><button className="button button-primary button-small" onClick={createAndInvestigateFollowUp} disabled={Boolean(demoBusy || running) || !demo.historicalOffRunId || !['success', 'skipped_duplicate'].includes(demo.historicalRetentionStatus)}>{demoBusy === 'followup' ? <><LoaderCircle size={14} className="spin"/> Recalling & investigating…</> : <><BrainCircuit size={14}/> Create & investigate related sample</>}</button></div>
+      {(!demo.historicalOffRunId || !['success', 'skipped_duplicate'].includes(demo.historicalRetentionStatus)) && <p className="demo-prerequisite-note" role="status">{!demo.historicalOffRunId ? 'The follow-up unlocks after a successful MEMORY_OFF run on the historical sample.' : 'The follow-up unlocks after an engineer confirms the verified resolution and Hindsight reports retain success.'}</p>}
       {demoError && <div className="inline-error"><AlertCircle size={15}/>{demoError}</div>}
     </section>
     <div className="investigation-toolbar panel"><div className="incident-select-wrap"><label htmlFor="incident-select">INCIDENT CONTEXT</label><div className="select-shell"><SquareActivity size={16} /><select id="incident-select" value={selectedIncidentId} onChange={(event) => setSelectedIncidentId(event.target.value)}><option value="">Select an incident…</option>{incidents.map((item) => <option value={item.id} key={item.id}>{item.incident_number} · {item.title}</option>)}</select><ChevronDown size={15} /></div></div><div className="mode-select"><div className="mode-label">MEMORY MODE</div><div className="segmented-control"><button className={mode === 'off' ? 'selected' : ''} onClick={() => setMode('off')}><span className="mode-toggle-dot off" />MEMORY_OFF</button><button className={mode === 'on' ? 'selected memory-selected' : ''} onClick={() => setMode('on')}><span className="mode-toggle-dot on" />MEMORY_ON</button></div></div><button className="button button-primary run-button" onClick={runInvestigation} disabled={!selectedIncidentId || running}>{running ? <><LoaderCircle className="spin" size={16} /> Investigating…</> : <><Sparkles size={16} /> Run investigation</>}</button></div>
     {showForm && <IncidentForm onCreated={(id) => { onIncidentCreated(id); setShowForm(false); notify('success', 'Incident submitted to the production record.') }} onCancel={() => setShowForm(false)} />}
     {!selectedIncident ? <div className="panel page-empty"><EmptyState icon={Radar} title="Select an incident to investigate" copy="Choose an incident from the context selector, or submit a new one. The analysis will use only evidence and memories returned by the backend." action={<button className="button button-secondary button-small" onClick={() => setShowForm(true)}><Plus size={14} /> Submit incident</button>} /></div> : <div className="investigation-layout">
-      <aside className="context-column"><article className="panel context-panel"><div className="panel-heading"><div><div className="section-kicker">CURRENT INCIDENT</div><h2>Context</h2></div><SeverityBadge value={selectedIncident.severity} /></div><div className="context-reference">{selectedIncident.incident_number}<span className="ref-separator">/</span><StatusBadge value={selectedIncident.status} /></div><h3 className="context-title">{selectedIncident.title}</h3><div className="context-attribute"><span>Service</span><strong>{selectedIncident.service_name}</strong></div>{detail?.environment && <div className="context-attribute"><span>Environment</span><strong>{detail.environment}</strong></div>}{detail?.source === 'synthetic_demo' && <div className="synthetic-context-note">SYNTHETIC DEMO DATA · not production telemetry</div>}<div className="context-attribute"><span>Reported</span><strong>{formatDate(detail?.created_at || selectedIncident.created_at)}</strong></div><div className="context-divider"/><div className="context-section-label">DESCRIPTION</div><p className="context-description">{detail?.description || 'Loading incident details…'}</p>{detail?.root_cause_summary && <div className="verified-context"><ShieldCheck size={15}/><div><span>ENGINEER VERIFIED</span><p>{detail.root_cause_summary}</p></div></div>}{detail?.logs?.length > 0 && <div className="evidence-stack"><div className="context-section-label">CURRENT EVIDENCE <span>{detail.logs.length}</span></div>{detail.logs.slice(0, 4).map((log) => <div className="raw-evidence" key={log.id}><span className="evidence-type">{log.log_type}</span><code>{log.log_text}</code><ProvenanceTag value="current_incident_evidence" /></div>)}</div>}</article><article className="panel workflow-card"><div className="section-kicker">INVESTIGATION FLOW</div><WorkflowStep number="01" title="Current evidence" active /><WorkflowStep number="02" title="Hindsight recall" active={mode === 'on'} muted={mode === 'off'} label={mode === 'off' ? 'SKIPPED' : undefined} /><WorkflowStep number="03" title="AI reasoning" active={Boolean(result) || running} /><WorkflowStep number="04" title="Engineer review" active={false} last /></article></aside>
+      <aside className="context-column"><article className="panel context-panel"><div className="panel-heading"><div><div className="section-kicker">CURRENT INCIDENT</div><h2>Context</h2></div><SeverityBadge value={selectedIncident.severity} /></div><div className="context-reference">{selectedIncident.incident_number}<span className="ref-separator">/</span><StatusBadge value={selectedIncident.status} /></div><h3 className="context-title">{selectedIncident.title}</h3><div className="context-attribute"><span>Service</span><strong>{selectedIncident.service_name}</strong></div>{detail?.environment && <div className="context-attribute"><span>Environment</span><strong>{detail.environment}</strong></div>}{detail?.source === 'synthetic_demo' && <div className="synthetic-context-note">SYNTHETIC DEMO DATA · not production telemetry</div>}<div className="context-attribute"><span>Reported</span><strong>{formatDate(detail?.created_at || selectedIncident.created_at)}</strong></div><div className="context-divider"/><div className="context-section-label">DESCRIPTION</div><p className="context-description">{detail?.description || 'Loading incident details…'}</p>{detail?.root_cause_summary && <div className="verified-context"><ShieldCheck size={15}/><div><span>ENGINEER VERIFIED</span><p>{detail.root_cause_summary}</p></div></div>}{detail?.logs?.length > 0 && <details className="evidence-disclosure"><summary className="context-section-label">CURRENT EVIDENCE <span>{detail.logs.length}</span></summary><div className="evidence-stack">{detail.logs.map((log) => <div className="raw-evidence" key={log.id}><span className="evidence-type">{log.log_type}</span><code>{log.log_text}</code><ProvenanceTag value="current_incident_evidence" /></div>)}</div></details>}</article><article className="panel workflow-card"><div className="section-kicker">INVESTIGATION FLOW</div><WorkflowStep number="01" title="Current evidence" active /><WorkflowStep number="02" title="Hindsight recall" active={Boolean(result?.memory_mode === 'on') || (running && mode === 'on')} muted={result?.memory_mode === 'off' || (!result && !running && mode === 'off')} label={result ? (result.memory_mode === 'off' ? 'Skipped in MEMORY_OFF' : `${result.analysis.historical_memories.length} memories returned`) : runError ? 'Not completed' : running ? (mode === 'on' ? 'Recalling' : 'Skipped in MEMORY_OFF') : (mode === 'on' ? 'Runs on submission' : 'Will be skipped')} /><WorkflowStep number="03" title="AI reasoning" active={Boolean(result) || running} /><WorkflowStep number="04" title="Engineer review" active={Boolean(result && detail?.verified_resolutions?.length)} label={result && detail?.verified_resolutions?.length ? 'Verified' : result ? 'Pending verification' : 'Available after a successful run'} last /></article></aside>
       <div className="analysis-column">{runError && <div className="alert alert-error"><AlertCircle size={17}/><div><strong>Investigation could not complete</strong><span>{runError}</span></div></div>}{running && <LoadingAnalysis mode={mode} />}{result && <InvestigationResult result={result} incident={selectedIncident} detail={detail} onResolutionRecorded={recordResolution} onDataChanged={onDataChanged} notify={notify} />}{!running && !result && !runError && <div className="panel analysis-placeholder"><div className="placeholder-visual"><div className="placeholder-orbit orbit-one"/><div className="placeholder-orbit orbit-two"/><div className="placeholder-core"><BrainCircuit size={27}/></div><span className="orbit-node node-one"/><span className="orbit-node node-two"/><span className="orbit-node node-three"/></div><div className="section-kicker">READY TO INVESTIGATE</div><h2>Evidence in. Clarity out.</h2><p>Run an investigation to analyze current signals{mode === 'on' ? ' alongside relevant Hindsight memory.' : ' without retrieving Hindsight memory.'}</p><button className="button button-primary" onClick={runInvestigation}><Sparkles size={15}/> Start {mode === 'on' ? 'memory-on' : 'memory-off'} analysis</button><span className="placeholder-foot"><ShieldCheck size={13}/>Recommendations always require engineer review</span></div>}</div>
     </div>}
   </>
@@ -462,8 +526,8 @@ function EngineerReviewPanel({ result, incident, detail, onResolutionRecorded, o
   }
 
   const existingResolution = detail?.verified_resolutions?.[0]
-  const alreadyResolved = resolutionResult || incident.status === 'resolved' || existingResolution
-  const retentionStatus = resolutionResult?.memory_retention_status
+  const alreadyResolved = Boolean(resolutionResult || existingResolution)
+  const retentionStatus = resolutionResult?.memory_retention_status || detail?.memory_retention_status || null
   return <section className="panel engineer-review-panel" aria-labelledby="engineer-review-heading">
     <div className="panel-heading"><div><div className="section-kicker">HUMAN-IN-THE-LOOP · RUN {result.investigation_id.slice(0, 8).toUpperCase()}</div><h2 id="engineer-review-heading">Engineer review</h2><p>AI findings stay hypotheses until an engineer explicitly confirms a verified outcome.</p></div><ShieldCheck size={18} className="heading-accent"/></div>
     {alreadyResolved ? <div className="review-saved-state"><div className="review-status-line"><CheckCircle2 size={16}/><strong>Verified resolution recorded</strong>{retentionStatus && <span className={`retention-pill ${retentionStatus}`}>Hindsight retain: {retentionStatus.replace('_', ' ')}</span>}</div><p><b>Root cause:</b> {resolutionResult ? rootCause : existingResolution?.root_cause_summary || detail?.root_cause_summary || 'See the verified incident record.'}</p>{existingResolution?.resolution_summary && <p><b>Resolution:</b> {existingResolution.resolution_summary}</p>}{retentionStatus === 'failed' && <p className="review-warning">The incident record is resolved, but the API reported that Hindsight retention failed. Do not treat the resolution as learned memory.</p>}</div> : <form className="engineer-review-form" onSubmit={submitResolution}>
@@ -488,7 +552,7 @@ function InvestigationResult({ result, incident, detail, onResolutionRecorded, o
   const analysis = result.analysis
   return <div className="result-stack"><div className="result-banner"><div className="result-banner-icon"><Check size={17}/></div><div className="result-banner-copy"><div><span className="section-kicker">INVESTIGATION COMPLETE</span><span className="run-id">RUN {result.investigation_id.slice(0, 8).toUpperCase()}</span></div><h2>{analysis.summary}</h2><p>{incident.incident_number} · {result.model_identifier} · MEMORY_{result.memory_mode.toUpperCase()}</p></div><span className="status-chip success">Succeeded</span></div>
     <div className="provenance-key panel"><span className="section-kicker">EVIDENCE PROVENANCE</span><div><ProvenanceTag value="current_incident_evidence"/><ProvenanceTag value="historical_hindsight_memory"/><ProvenanceTag value="ai_generated_hypothesis"/><ProvenanceTag value="engineer_verified_root_cause"/></div></div>
-    <div className="analysis-section"><div className="section-heading"><div><div className="section-kicker">POTENTIAL ROOT CAUSES</div><h2>Hypotheses to validate</h2></div><span className="count-chip">{analysis.potential_root_causes.length} hypotheses</span></div>{analysis.potential_root_causes.length ? <div className="hypothesis-list">{analysis.potential_root_causes.map((item, index) => <article className="panel hypothesis-card" key={`${item.cause}-${index}`}><div className="hypothesis-top"><span className="hypothesis-rank">HYPOTHESIS {String(index + 1).padStart(2, '0')}</span><ProvenanceTag value={item.provenance}/></div><h3>{item.cause}</h3><p>{item.rationale}</p><EvidenceRefs items={item.supporting_evidence}/><div className="hypothesis-foot"><span><ShieldCheck size={14}/>Not a verified root cause</span><span>{Math.round(item.confidence * 100)}% model confidence</span></div></article>)}</div> : <EmptyState icon={CircleHelp} title="No root-cause hypotheses returned" copy="The model returned no hypotheses for this evidence."/>}</div>
+    <div className="analysis-section"><div className="section-heading"><div><div className="section-kicker">POTENTIAL ROOT CAUSES</div><h2>Hypotheses to validate</h2></div><span className="count-chip">{analysis.potential_root_causes.length} hypotheses</span></div>{analysis.potential_root_causes.length ? <div className="hypothesis-list">{analysis.potential_root_causes.map((item, index) => <details className="hypothesis-disclosure" key={`${item.cause}-${index}`}><summary><span>HYPOTHESIS {String(index + 1).padStart(2, '0')}</span><strong>{item.cause}</strong><span>{Math.round(item.confidence * 100)}% confidence</span></summary><article className="panel hypothesis-card"><div className="hypothesis-top"><span className="hypothesis-rank">HYPOTHESIS {String(index + 1).padStart(2, '0')}</span><ProvenanceTag value={item.provenance}/></div><p>{item.rationale}</p><EvidenceRefs items={item.supporting_evidence}/><div className="hypothesis-foot"><span><ShieldCheck size={14}/>Not a verified root cause</span><span>{Math.round(item.confidence * 100)}% model confidence</span></div></article></details>)}</div> : <EmptyState icon={CircleHelp} title="No root-cause hypotheses returned" copy="The model returned no hypotheses for this evidence."/>}</div>
     <div className="analysis-section"><div className="section-heading"><div><div className="section-kicker">INVESTIGATION PLAN</div><h2>Recommended next steps</h2></div><span className="count-chip">Engineer review required</span></div>{analysis.recommended_steps.length ? <div className="recommendation-list">{analysis.recommended_steps.map((step, index) => <article className="panel recommendation-card" key={`${step.step}-${index}`}><div className="step-number">{String(index + 1).padStart(2, '0')}</div><div className="recommendation-body"><div className="recommendation-title-row"><h3>{step.step}</h3><ProvenanceTag value={step.provenance}/></div><p>{step.rationale}</p><EvidenceRefs items={step.supporting_evidence}/><span className="review-required"><ShieldCheck size={13}/> Requires engineer review</span></div></article>)}</div> : <EmptyState icon={CircleHelp} title="No steps returned" copy="No recommendations were included in this model response."/>}</div>
     <EngineerReviewPanel result={result} incident={incident} detail={detail} onResolutionRecorded={onResolutionRecorded} onDataChanged={onDataChanged} notify={notify} />
     <div className="result-bottom-grid"><article className="panel memory-result-card"><div className="panel-heading"><div><div className="section-kicker">HINDSIGHT · {result.memory_mode === 'off' ? 'HISTORICAL RECALL SKIPPED' : `HISTORICAL RECALL COMPLETED · ${analysis.historical_memories.length} RESULTS`}</div><h2>Historical context</h2></div><BrainCircuit size={16} className="violet-text"/></div>{result.memory_mode === 'off' ? <div className="memory-off-note"><span className="memory-off-icon"><ArrowDownRight size={16}/></span><div><strong>Memory retrieval skipped</strong><p>MEMORY_OFF used current incident evidence only. No Hindsight recall was performed.</p></div></div> : analysis.historical_memories.length ? <div className="memory-result-list">{analysis.historical_memories.map((memory) => <div className={`memory-result-item ${memory.tags?.includes('failed-approach') ? 'failure-memory' : ''}`} key={memory.id}><div className="memory-result-top"><ProvenanceTag value="historical_hindsight_memory"/><span>{memory.tags?.includes('failed-approach') ? 'HISTORICAL FAILED APPROACH · CAUTION' : memory.tags?.join(' · ') || 'Historical record'}</span></div><p>{memory.text}</p>{memory.tags?.includes('failed-approach') && <small className="failure-memory-note">Previously reported as unsuccessful; outcomes may differ in this incident.</small>}<code>{memory.id}</code></div>)}</div> : <EmptyState icon={History} title="No relevant memories returned" copy="Hindsight recall succeeded but returned no historical matches."/>}</article><article className="panel confidence-card"><div className="panel-heading"><div><div className="section-kicker">MODEL LIMITATIONS</div><h2>Confidence & gaps</h2></div><Fingerprint size={16} className="heading-accent"/></div><div className="confidence-score"><span>Assessment</span><strong>{Math.round(analysis.confidence.score * 100)}<small>%</small></strong></div><div className="limitation-list">{analysis.confidence.limitations.map((item, index) => <div key={index}><AlertCircle size={13}/>{item}</div>)}</div>{analysis.information_still_required.length > 0 && <div className="required-info"><strong>Still needed</strong>{analysis.information_still_required.map((item, index) => <span key={index}><ChevronRight size={13}/>{item}</span>)}</div>}</article></div>
@@ -597,7 +661,7 @@ function PostmortemPage({ incidents, notify, onNavigate }) {
 
   function downloadPostmortem(pm) {
     if (!pm?.id) return
-    const blob = new Blob([pm.body_markdown || ''], { type: 'text/markdown;charset=utf-8' })
+    const blob = createPostmortemMarkdownBlob(pm.body_markdown)
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
@@ -784,28 +848,45 @@ function PostmortemPage({ incidents, notify, onNavigate }) {
 }
 
 function RenderPostmortemMarkdown({ content }) {
-  const sections = content.split('\n---\n')
+  const blocks = parsePostmortemMarkdown(content)
   return (
-    <>
-      {sections.map((section, idx) => {
-        const lines = section.trim().split('\n')
-        const isWarning = section.includes('AUDIT REFERENCE ONLY') || section.includes('Unverified AI')
-        return (
-          <div key={idx} className={isWarning ? 'postmortem-callout-warning' : ''} style={{ margin: '10px 0' }}>
-            {lines.map((line, lIdx) => {
-              if (line.startsWith('# ')) return <h1 key={lIdx} style={{ fontSize: 16, margin: '8px 0', color: '#f0f3fa' }}>{line.slice(2)}</h1>
-              if (line.startsWith('## ')) return <h2 key={lIdx}>{line.slice(3)}</h2>
-              if (line.startsWith('### ')) return <h3 key={lIdx}>{line.slice(4)}</h3>
-              if (line.startsWith('> ')) return <blockquote key={lIdx} style={{ borderLeft: '3px solid #4a5568', paddingLeft: 10, margin: '6px 0', color: '#9ba8bc' }}>{line.slice(2)}</blockquote>
-              if (line.startsWith('- ')) return <div key={lIdx} style={{ paddingLeft: 12, margin: '3px 0' }}>• {line.slice(2)}</div>
-              if (!line.trim()) return <div key={lIdx} style={{ height: 6 }} />
-              return <p key={lIdx}>{line}</p>
-            })}
-          </div>
-        )
+    <div className="postmortem-markdown-content">
+      {blocks.map((block, index) => {
+        if (block.type === 'rule') return <hr key={index} />
+        if (block.type === 'heading') {
+          const Tag = `h${block.level}`
+          return <Tag key={index}><RenderInlineMarkdown tokens={block.children} /></Tag>
+        }
+        if (block.type === 'paragraph') return <p key={index}><RenderInlineMarkdown tokens={block.children} /></p>
+        if (block.type === 'quote') {
+          const quoteText = block.children.map((tokens) => inlineMarkdownText(tokens)).join(' ')
+          const warning = quoteText.includes('AUDIT REFERENCE ONLY') || quoteText.includes('Unverified AI')
+          return <blockquote key={index} className={warning ? 'postmortem-callout-warning' : ''}>
+            {block.children.map((tokens, lineIndex) => <p key={lineIndex}><RenderInlineMarkdown tokens={tokens} /></p>)}
+          </blockquote>
+        }
+        if (block.type === 'unorderedList' || block.type === 'orderedList') {
+          const Tag = block.type === 'orderedList' ? 'ol' : 'ul'
+          return <Tag key={index}>{block.items.map((tokens, itemIndex) => <li key={itemIndex}><RenderInlineMarkdown tokens={tokens} /></li>)}</Tag>
+        }
+        if (block.type === 'codeBlock') return <pre key={index}><code>{block.value}</code></pre>
+        return null
       })}
-    </>
+    </div>
   )
+}
+
+function RenderInlineMarkdown({ tokens }) {
+  return tokens.map((token, index) => {
+    if (token.type === 'strong') return <strong key={index}><RenderInlineMarkdown tokens={token.children} /></strong>
+    if (token.type === 'emphasis') return <em key={index}><RenderInlineMarkdown tokens={token.children} /></em>
+    if (token.type === 'code') return <code key={index}>{token.value}</code>
+    return <span key={index}>{token.value}</span>
+  })
+}
+
+function inlineMarkdownText(tokens) {
+  return tokens.map((token) => token.value ?? inlineMarkdownText(token.children || [])).join('')
 }
 
 function LoadingAnalysis({ mode }) { return <div className="panel loading-analysis"><div className="loading-visual"><div className="loading-ring"/><div className="loading-core"><BrainCircuit size={22}/></div></div><div className="section-kicker">INVESTIGATION IN PROGRESS</div><h2>Following the evidence trail</h2><p>{mode === 'on' ? 'Retrieving relevant Hindsight memories, then asking Groq to analyze the combined context.' : 'Analyzing the current incident evidence. Hindsight recall is skipped in MEMORY_OFF.'}</p><div className="loading-steps"><span className="done"><Check size={12}/>Incident context loaded</span>{mode === 'on' ? <span className="active"><LoaderCircle size={12} className="spin"/>Hindsight recall</span> : <span className="skipped"><ArrowDownRight size={12}/>Hindsight skipped</span>}<span><Sparkles size={12}/>Structured AI reasoning</span><span><ShieldCheck size={12}/>Engineer review</span></div></div> }

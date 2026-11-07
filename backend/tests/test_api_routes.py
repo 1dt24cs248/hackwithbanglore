@@ -133,6 +133,11 @@ class APIRouteTests(unittest.TestCase):
         self.assertEqual(len(result.json()["data"]["hypotheses"]), 1)
         self.assertEqual(len(result.json()["data"]["recommendations"]), 1)
         self.assertTrue(result.json()["data"]["findings"][1]["requires_engineer_review"])
+        detail = self.client.get(f"/api/incidents/{self.incident_id}")
+        self.assertEqual(detail.status_code, 200)
+        self.assertEqual(detail.json()["data"]["investigation_runs"][0]["id"], run_id)
+        self.assertEqual(detail.json()["data"]["investigation_runs"][0]["memory_mode"], "off")
+        self.assertEqual(detail.json()["data"]["investigation_runs"][0]["execution_status"], "succeeded")
 
     def test_memory_on_calls_recall_and_preserves_historical_provenance(self):
         response = self.client.post(f"/api/incidents/{self.incident_id}/investigate", json={"memory_mode":"MEMORY_ON"})
@@ -220,6 +225,9 @@ class APIRouteTests(unittest.TestCase):
         failed = self.client.post(f"/api/incidents/{self.incident_id}/investigate", json={"memory_mode":"on"})
         self.assertEqual(failed.status_code, 503)
         self.assertNotIn("upstream_timeout", failed.text)
+        self.assertEqual(failed.json()["detail"]["code"], "HINDSIGHT_UNAVAILABLE")
+        self.assertEqual(failed.json()["detail"]["error_category"], "hindsight_provider_error")
+        self.assertTrue(failed.json()["detail"]["investigation_id"])
         missing = self.client.get("/api/investigations/00000000-0000-0000-0000-000000000001")
         self.assertEqual(missing.status_code, 404)
         self.assertEqual(self.client.get("/api/incidents/00000000-0000-0000-0000-000000000001/memories").status_code, 404)
@@ -239,6 +247,12 @@ class APIRouteTests(unittest.TestCase):
         unverified_resp = self.client.post(f"/api/incidents/{self.incident_id}/postmortem")
         self.assertEqual(unverified_resp.status_code, 400)
         self.assertEqual(unverified_resp.json()["detail"]["code"], "RESOLUTION_REQUIRED")
+
+        # Preserve an actual AI finding as explicitly unverified in the report.
+        investigation_resp = self.client.post(
+            f"/api/incidents/{self.incident_id}/investigate", json={"memory_mode": "MEMORY_OFF"}
+        )
+        self.assertEqual(investigation_resp.status_code, 201, investigation_resp.text)
 
         # 2. Verify resolution
         resolve_resp = self.client.post(
@@ -260,6 +274,20 @@ class APIRouteTests(unittest.TestCase):
         self.assertTrue(pm_id)
         self.assertIn("Pool connection leak.", data["body_markdown"])
         self.assertIn("Senior SRE", data["body_markdown"])
+        markdown = data["body_markdown"]
+        self.assertIn("# Incident Postmortem:", markdown)
+        self.assertIn(f"**Incident Reference:** `{data['incident_number']}`", markdown)
+        self.assertIn("## 2. Engineer-Verified Root Cause", markdown)
+        self.assertIn("> **Explicitly verified by:** `Senior SRE`", markdown)
+        self.assertIn("- **Affected Service:** `payment-api`", markdown)
+        self.assertIn("---", markdown)
+        self.assertIn("> [!WARNING]", markdown)
+        self.assertIn("AUDIT REFERENCE ONLY", markdown)
+        self.assertIn("UNVERIFIED", markdown)
+        self.assertIn("Possible pool saturation.", markdown)
+        self.assertNotIn(r"**\*\*Incident Reference:\*\***", markdown)
+        self.assertNotIn(r"\`", markdown)
+        self.assertNotIn("**\\-", markdown)
 
         # 4. List postmortems
         list_resp = self.client.get("/api/postmortems")
@@ -278,6 +306,7 @@ class APIRouteTests(unittest.TestCase):
         self.assertIn("text/markdown", dl_resp.headers["content-type"])
         self.assertIn("attachment", dl_resp.headers["content-disposition"])
         self.assertIn("# Incident Postmortem", dl_resp.text)
+        self.assertEqual(dl_resp.text, markdown)
 
         # 7. Non-existent postmortem returns 404
         missing_resp = self.client.get("/api/postmortems/00000000-0000-0000-0000-000000000001")
