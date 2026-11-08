@@ -402,7 +402,86 @@ class InvestigationServiceTests(unittest.IsolatedAsyncioTestCase):
             )
         )
         self.assertEqual(event.status, "success")
-        self.assertEqual(event.payload_summary, "Verified resolution retained.")
+        self.assertTrue(event.payload_summary.startswith("Verified resolution retained."))
+        self.assertIn(f"resolution_id={resolution.id}", event.payload_summary)
+
+    async def test_identical_resolution_submission_reuses_record_and_revision_is_preserved(self) -> None:
+        payload = {
+            "root_cause_summary": "Worker concurrency exhausted the database pool.",
+            "resolution_summary": "Reduced worker concurrency from 24 to 8.",
+            "verified_by": "engineer-1",
+            "confirmed": True,
+        }
+        first = await self.service.record_verified_resolution(self.incident_id, payload)
+        duplicate = await self.service.record_verified_resolution(self.incident_id, payload)
+
+        self.assertEqual(duplicate.resolution_id, first.resolution_id)
+        self.assertEqual(
+            self.session.scalar(
+                select(VerifiedResolution).where(
+                    VerifiedResolution.incident_id == self.incident_id
+                )
+            ).id,
+            first.resolution_id,
+        )
+
+        revised = {
+            **payload,
+            "root_cause_summary": "A later verified review found an additional pool configuration issue.",
+        }
+        revision = await self.service.record_verified_resolution(self.incident_id, revised)
+        self.assertNotEqual(revision.resolution_id, first.resolution_id)
+        self.assertEqual(
+            len(
+                self.session.scalars(
+                    select(VerifiedResolution).where(
+                        VerifiedResolution.incident_id == self.incident_id
+                    )
+                ).all()
+            ),
+            2,
+        )
+
+    async def test_retry_retains_existing_verified_resolution_without_adding_a_row(self) -> None:
+        self.hindsight_sdk.aretain.side_effect = [
+            RuntimeError("temporary provider failure"),
+            RetainResponse(
+                success=True,
+                bank_id=DEFAULT_HINDSIGHT_BANK_ID,
+                items_count=1,
+                var_async=False,
+            ),
+        ]
+        result = await self.service.record_verified_resolution(
+            self.incident_id,
+            {
+                "root_cause_summary": "Worker concurrency exhausted the database pool.",
+                "resolution_summary": "Reduced worker concurrency from 24 to 8.",
+                "verified_by": "engineer-1",
+                "confirmed": True,
+            },
+        )
+        self.assertEqual(result.memory_retention_status, "failed")
+
+        retried = await self.service.retry_verified_resolution_retention(self.incident_id)
+
+        self.assertEqual(retried.resolution_id, result.resolution_id)
+        self.assertEqual(retried.memory_retention_status, "success")
+        self.assertEqual(
+            len(
+                self.session.scalars(
+                    select(VerifiedResolution).where(
+                        VerifiedResolution.incident_id == self.incident_id
+                    )
+                ).all()
+            ),
+            1,
+        )
+        self.assertEqual(self.hindsight_sdk.aretain.call_count, 2)
+        self.assertEqual(
+            self.hindsight_sdk.aretain.call_args_list[0].kwargs["document_id"],
+            self.hindsight_sdk.aretain.call_args_list[1].kwargs["document_id"],
+        )
 
     async def test_failed_approach_is_retained_only_as_failure_memory(self) -> None:
         result = await self.service.record_failed_approach(

@@ -395,7 +395,12 @@ class InvestigationService:
         )
         verified_at = _now()
         try:
-            incident = self._load_incident(incident_uuid)
+            incident = self._session.scalar(
+                select(Incident)
+                .options(selectinload(Incident.verified_resolutions))
+                .where(Incident.id == incident_uuid)
+                .with_for_update()
+            )
             if incident is None:
                 raise InvestigationServiceError("incident_not_found")
             if data.investigation_run_id is not None:
@@ -407,19 +412,32 @@ class InvestigationService:
                 )
                 if run is None:
                     raise InvestigationServiceError("investigation_not_found")
-            resolution = VerifiedResolution(
-                incident_id=incident_uuid,
-                investigation_run_id=data.investigation_run_id,
-                root_cause_summary=data.root_cause_summary,
-                resolution_summary=data.resolution_summary,
-                verified_by=data.verified_by,
-                verified_at=verified_at,
+            matching_resolutions = [
+                item
+                for item in incident.verified_resolutions
+                if item.root_cause_summary == data.root_cause_summary
+                and item.resolution_summary == data.resolution_summary
+                and item.verified_by == data.verified_by
+            ]
+            resolution = max(
+                matching_resolutions,
+                key=lambda item: (item.verified_at, str(item.id)),
+                default=None,
             )
-            self._session.add(resolution)
-            incident.root_cause_summary = data.root_cause_summary
-            incident.status = "resolved"
-            incident.resolved_at = verified_at
-            self._session.flush()
+            if resolution is None:
+                resolution = VerifiedResolution(
+                    incident_id=incident_uuid,
+                    investigation_run_id=data.investigation_run_id,
+                    root_cause_summary=data.root_cause_summary,
+                    resolution_summary=data.resolution_summary,
+                    verified_by=data.verified_by,
+                    verified_at=verified_at,
+                )
+                self._session.add(resolution)
+                incident.root_cause_summary = data.root_cause_summary
+                incident.status = "resolved"
+                incident.resolved_at = verified_at
+                self._session.flush()
             resolution_id = resolution.id
             incident_number = incident.incident_number
             technical_context = f"Service: {incident.service_name}; Environment: {incident.environment}"
@@ -436,13 +454,14 @@ class InvestigationService:
             resolution=data.resolution_summary,
             verified_by=data.verified_by,
             incident_id=incident_number,
-            verified_at=verified_at,
+            verified_at=resolution.verified_at,
             technical_context=technical_context,
         )
         self._audit_retention(
             incident_id=incident_uuid,
-            run_id=data.investigation_run_id,
+            run_id=resolution.investigation_run_id,
             memory_type="resolution",
+            resolution_id=resolution.id,
             retention=retention,
             payload_summary=(
                 "Verified resolution retained."
@@ -454,6 +473,68 @@ class InvestigationService:
         )
         return VerifiedResolutionResult(
             resolution_id=resolution_id,
+            incident_id=incident_uuid,
+            status="resolved",
+            memory_retention_status=retention.status,
+            memory_error_category=retention.error_category,
+        )
+
+    async def retry_verified_resolution_retention(
+        self, incident_id: uuid.UUID | str
+    ) -> VerifiedResolutionResult:
+        """Retry Hindsight retention for the latest already-verified resolution."""
+        incident_uuid = _uuid(incident_id, "invalid_incident_id")
+        try:
+            incident = self._session.scalar(
+                select(Incident)
+                .options(selectinload(Incident.verified_resolutions))
+                .where(Incident.id == incident_uuid)
+            )
+            if incident is None:
+                raise InvestigationServiceError("incident_not_found")
+            resolution = max(
+                incident.verified_resolutions,
+                key=lambda item: (item.verified_at, str(item.id)),
+                default=None,
+            )
+            if resolution is None:
+                raise InvestigationServiceError("resolution_not_found")
+            incident_number = incident.incident_number
+            technical_context = (
+                f"Service: {incident.service_name}; Environment: {incident.environment}"
+            )
+            self._session.commit()
+        except InvestigationServiceError:
+            self._session.rollback()
+            raise
+        except SQLAlchemyError:
+            self._session.rollback()
+            raise InvestigationServiceError("database_error") from None
+
+        retention = await self._retain_verified_resolution(
+            root_cause=resolution.root_cause_summary,
+            resolution=resolution.resolution_summary,
+            verified_by=resolution.verified_by,
+            incident_id=incident_number,
+            verified_at=resolution.verified_at,
+            technical_context=technical_context,
+        )
+        self._audit_retention(
+            incident_id=incident_uuid,
+            run_id=resolution.investigation_run_id,
+            memory_type="resolution",
+            resolution_id=resolution.id,
+            retention=retention,
+            payload_summary=(
+                "Verified resolution retained."
+                if retention.status == "success"
+                else "Verified resolution retention skipped as duplicate."
+                if retention.status == "skipped_duplicate"
+                else "Verified resolution retention failed."
+            ),
+        )
+        return VerifiedResolutionResult(
+            resolution_id=resolution.id,
             incident_id=incident_uuid,
             status="resolved",
             memory_retention_status=retention.status,
@@ -625,9 +706,12 @@ class InvestigationService:
         incident_id: uuid.UUID,
         run_id: uuid.UUID | None,
         memory_type: str,
+        resolution_id: uuid.UUID | None = None,
         retention: RetainResult,
         payload_summary: str,
     ) -> None:
+        if resolution_id is not None:
+            payload_summary = f"{payload_summary} resolution_id={resolution_id}"
         status = "failed" if retention.status == "failed" else "success"
         values = _memory_event_values(
             operation="retain",
@@ -637,9 +721,11 @@ class InvestigationService:
             error_category=retention.error_category,
         )
         try:
-            self._session.add(
-                _memory_event(incident_id=incident_id, run_id=run_id, values=values)
+            event = _memory_event(
+                incident_id=incident_id, run_id=run_id, values=values
             )
+            event.created_at = _now()
+            self._session.add(event)
             self._session.commit()
         except SQLAlchemyError:
             self._session.rollback()

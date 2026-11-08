@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import uuid
 from decimal import Decimal
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 from typing import Literal
 
@@ -65,7 +65,12 @@ def _fail(error: InvestigationServiceError) -> HTTPException:
         "model_unavailable", "malformed_response", "api_error",
     }:
         provider_category = "provider_error"
-    if category in {"incident_not_found", "investigation_not_found", "recommendation_not_found"}:
+    if category in {
+        "incident_not_found",
+        "investigation_not_found",
+        "recommendation_not_found",
+        "resolution_not_found",
+    }:
         return HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Requested resource was not found."})
     if category.startswith("hindsight_"):
         message = f"Hindsight recall failed ({provider_category})."
@@ -152,26 +157,15 @@ def get_incident(incident_id: uuid.UUID, session: Session = Depends(get_db)) -> 
     if incident is None:
         raise _fail(InvestigationServiceError("incident_not_found"))
 
-    # Resolve the latest Hindsight retention status for the demo learning loop
-    retention_status = None
-    latest_event = session.scalar(
-        select(MemoryOperationEvent)
-        .where(
-            MemoryOperationEvent.incident_id == incident_id,
-            MemoryOperationEvent.operation_name == "retain",
-            MemoryOperationEvent.memory_type == "resolution",
+    resolutions = _ordered_resolutions(incident)
+    latest_resolution = resolutions[0] if resolutions else None
+    retention_status = (
+        _resolution_retention_status(
+            session, incident_id, latest_resolution, len(resolutions)
         )
-        .order_by(MemoryOperationEvent.created_at.desc(), MemoryOperationEvent.id.desc())
+        if latest_resolution
+        else None
     )
-
-    if latest_event:
-        summary = latest_event.payload_summary or ""
-        if "Verified resolution retained." in summary:
-            retention_status = "success"
-        elif "Verified resolution retention skipped as duplicate." in summary:
-            retention_status = "skipped_duplicate"
-        elif "Verified resolution retention failed." in summary:
-            retention_status = "failed"
 
     return _envelope({
         **_incident_summary(incident),
@@ -184,7 +178,7 @@ def get_incident(incident_id: uuid.UUID, session: Session = Depends(get_db)) -> 
         "memory_retention_status": retention_status,
         "logs": [{"id": str(x.id), "log_type": x.log_type, "log_text": x.log_text, "source_system": x.source_system, "created_at": _iso(x.created_at)} for x in incident.logs],
         "deployments": [{"id": str(x.id), "deployment_id": x.deployment_id, "version": x.version, "environment": x.environment, "service_name": x.service_name, "deployed_by": x.deployed_by, "deployed_at": _iso(x.deployed_at), "change_summary": x.change_summary} for x in incident.deployments],
-        "verified_resolutions": [{"id": str(x.id), "root_cause_summary": x.root_cause_summary, "resolution_summary": x.resolution_summary, "verified_by": x.verified_by, "verified_at": _iso(x.verified_at), "provenance": "engineer_verified_root_cause"} for x in incident.verified_resolutions],
+        "verified_resolutions": [{"id": str(x.id), "root_cause_summary": x.root_cause_summary, "resolution_summary": x.resolution_summary, "verified_by": x.verified_by, "verified_at": _iso(x.verified_at), "provenance": "engineer_verified_root_cause"} for x in resolutions],
         "investigation_runs": [{
             "id": str(run.id),
             "memory_mode": run.memory_mode,
@@ -261,6 +255,20 @@ async def resolve_incident(
 ) -> dict[str, Any]:
     try:
         return _envelope(await service.record_verified_resolution(incident_id, payload))
+    except InvestigationServiceError as error:
+        raise _fail(error) from None
+
+
+@router.post("/incidents/{incident_id}/resolution/retain", status_code=status.HTTP_200_OK)
+async def retry_resolution_retention(
+    incident_id: uuid.UUID,
+    service: InvestigationService = Depends(get_investigation_service),
+) -> dict[str, Any]:
+    """Retry retention using the latest resolution already verified and stored."""
+    try:
+        return _envelope(
+            await service.retry_verified_resolution_retention(incident_id)
+        )
     except InvestigationServiceError as error:
         raise _fail(error) from None
 
@@ -448,11 +456,30 @@ def generate_incident_postmortem(
             "message": "A postmortem can only be generated after an engineer explicitly confirms a verified resolution. Unverified incidents cannot produce a postmortem.",
         })
 
-    resolution = incident.verified_resolutions[0]
-    existing = session.scalar(
-        select(Postmortem).where(Postmortem.incident_id == incident_id, Postmortem.status == "final")
+    resolutions = _ordered_resolutions(incident)
+    resolution = resolutions[0]
+    settings = getattr(request.app.state, "settings", None)
+    bank_id = settings.hindsight_bank_id if settings else "incidentiq-hackathon-demo"
+    retention_status = _resolution_retention_status(
+        session, incident_id, resolution, len(resolutions)
     )
-    if existing is not None:
+    body = _build_postmortem_markdown(
+        incident,
+        resolution,
+        incident.investigation_runs,
+        bank_id,
+        retention_status,
+    )
+    existing = session.scalar(
+        select(Postmortem)
+        .where(Postmortem.incident_id == incident_id, Postmortem.status == "final")
+        .order_by(Postmortem.revision_number.desc(), Postmortem.created_at.desc())
+    )
+    if (
+        existing is not None
+        and existing.verified_resolution_id == resolution.id
+        and existing.body_markdown == body
+    ):
         return _envelope({
             "postmortem_id": str(existing.id),
             "incident_id": str(incident.id),
@@ -465,14 +492,26 @@ def generate_incident_postmortem(
             "created_at": _iso(existing.created_at),
         })
 
-    settings = getattr(request.app.state, "settings", None)
-    bank_id = settings.hindsight_bank_id if settings else "incidentiq-hackathon-demo"
-    body = _build_postmortem_markdown(incident, resolution, incident.investigation_runs, bank_id)
+    if existing is not None:
+        existing.status = "archived"
+        try:
+            session.flush()
+        except SQLAlchemyError:
+            session.rollback()
+            raise HTTPException(503, detail={"code": "DATABASE_UNAVAILABLE", "message": "Could not revise postmortem."}) from None
 
+    next_revision = (
+        session.scalar(
+            select(func.max(Postmortem.revision_number)).where(
+                Postmortem.incident_id == incident_id
+            )
+        )
+        or 0
+    ) + 1
     pm = Postmortem(
         incident_id=incident.id,
         verified_resolution_id=resolution.id,
-        revision_number=1,
+        revision_number=next_revision,
         title=f"Postmortem: {incident.title}",
         body_markdown=body,
         status="final",
@@ -517,6 +556,7 @@ def download_postmortem(
         session.commit()
     except SQLAlchemyError:
         session.rollback()
+        raise HTTPException(503, detail={"code": "DATABASE_UNAVAILABLE", "message": "Could not record the postmortem download."}) from None
 
     ref = pm.incident.incident_number if pm.incident else str(pm.id)[:8]
     filename = f"postmortem-{ref}.md"
@@ -532,7 +572,16 @@ def _build_postmortem_markdown(
     resolution: VerifiedResolution,
     runs: list[InvestigationRun],
     bank_id: str,
+    retention_status: str | None = None,
 ) -> str:
+    retention_summary = {
+        "success": "Hindsight reported successful retention of this verified resolution.",
+        "skipped_duplicate": "Hindsight reported that this stable verified-resolution memory already exists; no duplicate retain was performed.",
+        "failed": "Retention failed. This verified resolution is stored in PostgreSQL, but it must not be presented as learned Hindsight memory.",
+    }.get(
+        retention_status,
+        "No retention result is recorded for this verified resolution; check Hindsight before describing it as learned memory.",
+    )
     md_lines = [
         f"# Incident Postmortem: {incident.title}",
         "",
@@ -597,8 +646,8 @@ def _build_postmortem_markdown(
         "## 5. Lessons Learned & Retained Hindsight Memory",
         "",
         f"- **Memory Bank:** `{bank_id}`",
-        "- **Retained Artifacts:** Verified resolution stored with persistent tags `['incident', 'verified-resolution']`.",
-        "- **Future Benefit:** Subsequent investigations in the same service/domain recall this verified pattern automatically during `MEMORY_ON` investigations.",
+        f"- **Retention status:** {retention_summary}",
+        "- **Future use:** MEMORY_ON investigations may recall relevant Hindsight memories; recall depends on provider relevance and availability, and historical context is not proof of the current cause.",
         "",
         "---",
         "",
@@ -629,6 +678,59 @@ def _build_postmortem_markdown(
         md_lines.append("")
 
     return "\n".join(md_lines)
+
+
+def _ordered_resolutions(incident: Incident) -> list[VerifiedResolution]:
+    return sorted(
+        incident.verified_resolutions,
+        key=lambda item: (
+            item.verified_at.replace(tzinfo=timezone.utc)
+            if item.verified_at.tzinfo is None
+            else item.verified_at.astimezone(timezone.utc),
+            str(item.id),
+        ),
+        reverse=True,
+    )
+
+
+def _resolution_retention_status(
+    session: Session,
+    incident_id: uuid.UUID,
+    resolution: VerifiedResolution,
+    resolution_count: int,
+) -> str | None:
+    event_query = (
+        select(MemoryOperationEvent)
+        .where(
+            MemoryOperationEvent.incident_id == incident_id,
+            MemoryOperationEvent.operation_name == "retain",
+            MemoryOperationEvent.memory_type == "resolution",
+        )
+        .order_by(
+            MemoryOperationEvent.created_at.desc(),
+            MemoryOperationEvent.id.desc(),
+        )
+    )
+    event = session.scalar(
+        event_query.where(
+            MemoryOperationEvent.payload_summary.contains(
+                f"resolution_id={resolution.id}"
+            )
+        )
+    )
+    if event is None and resolution_count == 1:
+        event = session.scalar(event_query)
+    if event is None:
+        return None
+
+    summary = event.payload_summary or ""
+    if "Verified resolution retained." in summary:
+        return "success"
+    if "Verified resolution retention skipped as duplicate." in summary:
+        return "skipped_duplicate"
+    if "Verified resolution retention failed." in summary:
+        return "failed"
+    return None
 
 
 def _incident_summary(incident: Incident) -> dict[str, Any]:

@@ -13,7 +13,7 @@ from sqlalchemy.pool import StaticPool
 from app.config import DEFAULT_HINDSIGHT_BANK_ID
 from app.database import create_database_engine, create_session_factory, get_db
 from app.main import app
-from app.models import Base, Incident, InvestigationFinding, InvestigationRun, MemoryOperationEvent
+from app.models import Base, Incident, InvestigationFinding, InvestigationRun, MemoryOperationEvent, VerifiedResolution
 from app.schemas.ai import InvestigationAnalysis
 from app.services.hindsight_service import HistoricalMemory, RecallResult, RetainResult
 from app.services.investigation_service import InvestigationService
@@ -169,6 +169,89 @@ class APIRouteTests(unittest.TestCase):
         self.assertEqual(failed.status_code, 201)
         self.hindsight_service.retain_failed_approach.assert_called_once()
 
+    def test_identical_resolution_retry_reuses_row_and_new_details_create_latest_revision(self):
+        payload = {
+            "root_cause_summary": "Verified pool saturation.",
+            "resolution_summary": "Adjusted pool limits.",
+            "verified_by": "engineer",
+            "confirmed": True,
+        }
+        first = self.client.post(f"/api/incidents/{self.incident_id}/resolve", json=payload)
+        duplicate = self.client.post(f"/api/incidents/{self.incident_id}/resolve", json=payload)
+        self.assertEqual(first.status_code, 201, first.text)
+        self.assertEqual(duplicate.status_code, 201, duplicate.text)
+        self.assertEqual(
+            duplicate.json()["data"]["resolution_id"],
+            first.json()["data"]["resolution_id"],
+        )
+
+        revised = {
+            **payload,
+            "root_cause_summary": "A later verified review found a second contributing factor.",
+        }
+        revision = self.client.post(f"/api/incidents/{self.incident_id}/resolve", json=revised)
+        self.assertEqual(revision.status_code, 201, revision.text)
+        detail = self.client.get(f"/api/incidents/{self.incident_id}").json()["data"]
+        self.assertEqual(len(detail["verified_resolutions"]), 2)
+        self.assertEqual(
+            detail["verified_resolutions"][0]["id"],
+            revision.json()["data"]["resolution_id"],
+        )
+        self.assertEqual(
+            detail["verified_resolutions"][0]["root_cause_summary"],
+            revised["root_cause_summary"],
+        )
+
+    def test_resolution_retention_retry_uses_stored_resolution_and_missing_status_is_null(self):
+        no_resolution = self.client.post(
+            f"/api/incidents/{self.incident_id}/resolution/retain"
+        )
+        self.assertEqual(no_resolution.status_code, 404)
+        self.assertIsNone(
+            self.client.get(f"/api/incidents/{self.incident_id}").json()["data"][
+                "memory_retention_status"
+            ]
+        )
+
+        self.hindsight_service.retain_verified_resolution.side_effect = [
+            RetainResult(
+                status="failed",
+                bank_id=DEFAULT_HINDSIGHT_BANK_ID,
+                memory_type="verified_resolution",
+                recorded_at="2026-01-01T00:00:00Z",
+                error_category="timeout",
+            ),
+            RetainResult(
+                status="success",
+                bank_id=DEFAULT_HINDSIGHT_BANK_ID,
+                memory_type="verified_resolution",
+                recorded_at="2026-01-01T00:00:01Z",
+                document_id="doc-1",
+            ),
+        ]
+        saved = self.client.post(
+            f"/api/incidents/{self.incident_id}/resolve",
+            json={
+                "root_cause_summary": "Verified pool saturation.",
+                "resolution_summary": "Adjusted pool limits.",
+                "verified_by": "engineer",
+                "confirmed": True,
+            },
+        )
+        self.assertEqual(saved.json()["data"]["memory_retention_status"], "failed")
+        retried = self.client.post(
+            f"/api/incidents/{self.incident_id}/resolution/retain"
+        )
+        self.assertEqual(retried.status_code, 200, retried.text)
+        self.assertEqual(retried.json()["data"]["memory_retention_status"], "success")
+        self.assertEqual(
+            retried.json()["data"]["resolution_id"],
+            saved.json()["data"]["resolution_id"],
+        )
+        detail = self.client.get(f"/api/incidents/{self.incident_id}").json()["data"]
+        self.assertEqual(detail["memory_retention_status"], "success")
+        self.assertEqual(len(detail["verified_resolutions"]), 1)
+
     def test_memory_endpoint_and_dashboard_statistics(self):
         memories = self.client.get(f"/api/incidents/{self.incident_id}/memories")
         self.assertEqual(memories.status_code, 200)
@@ -279,6 +362,7 @@ class APIRouteTests(unittest.TestCase):
         self.assertIn(f"**Incident Reference:** `{data['incident_number']}`", markdown)
         self.assertIn("## 2. Engineer-Verified Root Cause", markdown)
         self.assertIn("> **Explicitly verified by:** `Senior SRE`", markdown)
+        self.assertIn("Hindsight reported successful retention", markdown)
         self.assertIn("- **Affected Service:** `payment-api`", markdown)
         self.assertIn("---", markdown)
         self.assertIn("> [!WARNING]", markdown)
@@ -307,11 +391,59 @@ class APIRouteTests(unittest.TestCase):
         self.assertIn("attachment", dl_resp.headers["content-disposition"])
         self.assertIn("# Incident Postmortem", dl_resp.text)
         self.assertEqual(dl_resp.text, markdown)
+        self.assertEqual(
+            self.client.get(f"/api/postmortems/{pm_id}").json()["data"]["downloaded_count"],
+            1,
+        )
 
         # 7. Non-existent postmortem returns 404
         missing_resp = self.client.get("/api/postmortems/00000000-0000-0000-0000-000000000001")
         self.assertEqual(missing_resp.status_code, 404)
 
+    def test_failed_postmortem_status_and_verified_resolution_revision(self):
+        self.hindsight_service.retain_verified_resolution.return_value = RetainResult(
+            status="failed",
+            bank_id=DEFAULT_HINDSIGHT_BANK_ID,
+            memory_type="verified_resolution",
+            recorded_at="2026-01-01T00:00:00Z",
+            error_category="timeout",
+        )
+        payload = {
+            "root_cause_summary": "Verified pool saturation.",
+            "resolution_summary": "Adjusted pool limits.",
+            "verified_by": "engineer",
+            "confirmed": True,
+        }
+        saved = self.client.post(
+            f"/api/incidents/{self.incident_id}/resolve", json=payload
+        )
+        self.assertEqual(saved.json()["data"]["memory_retention_status"], "failed")
+        first = self.client.post(f"/api/incidents/{self.incident_id}/postmortem")
+        self.assertIn(
+            "Retention failed. This verified resolution is stored in PostgreSQL",
+            first.json()["data"]["body_markdown"],
+        )
+
+        self.hindsight_service.retain_verified_resolution.return_value = RetainResult(
+            status="success",
+            bank_id=DEFAULT_HINDSIGHT_BANK_ID,
+            memory_type="verified_resolution",
+            recorded_at="2026-01-01T00:00:01Z",
+            document_id="doc-2",
+        )
+        self.client.post(f"/api/incidents/{self.incident_id}/resolution/retain")
+        refreshed = self.client.post(
+            f"/api/incidents/{self.incident_id}/postmortem"
+        ).json()["data"]
+        self.assertEqual(refreshed["revision_number"], 2)
+        self.assertIn(
+            "Hindsight reported successful retention",
+            refreshed["body_markdown"],
+        )
+        old = self.client.get(
+            f"/api/postmortems/{first.json()['data']['postmortem_id']}"
+        ).json()["data"]
+        self.assertEqual(old["status"], "archived")
 
 
 if __name__ == "__main__":
