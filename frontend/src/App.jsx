@@ -7,9 +7,9 @@ import {
   Sparkles, SquareActivity, X,
 } from 'lucide-react'
 import { hindsightBankLabel } from './providerStatus.js'
-import { createPostmortemMarkdownBlob, parsePostmortemMarkdown } from './postmortemMarkdown.js'
+import { parsePostmortemMarkdown } from './postmortemMarkdown.js'
 
-const API_ROOT = (import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8001/api').replace(/\/$/, '')
+const API_ROOT = (import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api').replace(/\/$/, '')
 const DATA_LABEL = import.meta.env.VITE_DATA_LABEL
 const DEMO_STORAGE_KEY = 'incidentiq.synthetic-demo.v1'
 const DEMO_FIXTURES = {
@@ -432,7 +432,7 @@ function InvestigationPage({ incidents, selectedIncidentId, setSelectedIncidentI
     {showForm && <IncidentForm onCreated={(id) => { onIncidentCreated(id); setShowForm(false); notify('success', 'Incident submitted to the production record.') }} onCancel={() => setShowForm(false)} />}
     {!selectedIncident ? <div className="panel page-empty"><EmptyState icon={Radar} title="Select an incident to investigate" copy="Choose an incident from the context selector, or submit a new one. The analysis will use only evidence and memories returned by the backend." action={<button className="button button-secondary button-small" onClick={() => setShowForm(true)}><Plus size={14} /> Submit incident</button>} /></div> : <div className="investigation-layout">
       <aside className="context-column"><article className="panel context-panel"><div className="panel-heading"><div><div className="section-kicker">CURRENT INCIDENT</div><h2>Context</h2></div><SeverityBadge value={selectedIncident.severity} /></div><div className="context-reference">{selectedIncident.incident_number}<span className="ref-separator">/</span><StatusBadge value={selectedIncident.status} /></div><h3 className="context-title">{selectedIncident.title}</h3><div className="context-attribute"><span>Service</span><strong>{selectedIncident.service_name}</strong></div>{detail?.environment && <div className="context-attribute"><span>Environment</span><strong>{detail.environment}</strong></div>}{detail?.source === 'synthetic_demo' && <div className="synthetic-context-note">SYNTHETIC DEMO DATA · not production telemetry</div>}<div className="context-attribute"><span>Reported</span><strong>{formatDate(detail?.created_at || selectedIncident.created_at)}</strong></div><div className="context-divider"/><div className="context-section-label">DESCRIPTION</div><p className="context-description">{detail?.description || 'Loading incident details…'}</p>{detail?.root_cause_summary && <div className="verified-context"><ShieldCheck size={15}/><div><span>ENGINEER VERIFIED</span><p>{detail.root_cause_summary}</p></div></div>}{detail?.logs?.length > 0 && <details className="evidence-disclosure"><summary className="context-section-label">CURRENT EVIDENCE <span>{detail.logs.length}</span></summary><div className="evidence-stack">{detail.logs.map((log) => <div className="raw-evidence" key={log.id}><span className="evidence-type">{log.log_type}</span><code>{log.log_text}</code><ProvenanceTag value="current_incident_evidence" /></div>)}</div></details>}</article><article className="panel workflow-card"><div className="section-kicker">INVESTIGATION FLOW</div><WorkflowStep number="01" title="Current evidence" active /><WorkflowStep number="02" title="Hindsight recall" active={Boolean(result?.memory_mode === 'on') || (running && mode === 'on')} muted={result?.memory_mode === 'off' || (!result && !running && mode === 'off')} label={result ? (result.memory_mode === 'off' ? 'Skipped in MEMORY_OFF' : `${result.analysis.historical_memories.length} memories returned`) : runError ? 'Not completed' : running ? (mode === 'on' ? 'Recalling' : 'Skipped in MEMORY_OFF') : (mode === 'on' ? 'Runs on submission' : 'Will be skipped')} /><WorkflowStep number="03" title="AI reasoning" active={Boolean(result) || running} /><WorkflowStep number="04" title="Engineer review" active={Boolean(result && detail?.verified_resolutions?.length)} label={result && detail?.verified_resolutions?.length ? 'Verified' : result ? 'Pending verification' : 'Available after a successful run'} last /></article></aside>
-      <div className="analysis-column">{runError && <div className="alert alert-error"><AlertCircle size={17}/><div><strong>Investigation could not complete</strong><span>{runError}</span></div></div>}{running && <LoadingAnalysis mode={mode} />}{result && <InvestigationResult result={result} incident={selectedIncident} detail={detail} onResolutionRecorded={recordResolution} onDataChanged={onDataChanged} notify={notify} />}{!running && !result && !runError && <div className="panel analysis-placeholder"><div className="placeholder-visual"><div className="placeholder-orbit orbit-one"/><div className="placeholder-orbit orbit-two"/><div className="placeholder-core"><BrainCircuit size={27}/></div><span className="orbit-node node-one"/><span className="orbit-node node-two"/><span className="orbit-node node-three"/></div><div className="section-kicker">READY TO INVESTIGATE</div><h2>Evidence in. Clarity out.</h2><p>Run an investigation to analyze current signals{mode === 'on' ? ' alongside relevant Hindsight memory.' : ' without retrieving Hindsight memory.'}</p><button className="button button-primary" onClick={runInvestigation}><Sparkles size={15}/> Start {mode === 'on' ? 'memory-on' : 'memory-off'} analysis</button><span className="placeholder-foot"><ShieldCheck size={13}/>Recommendations always require engineer review</span></div>}</div>
+      <div className="analysis-column">{runError && <div className="alert alert-error"><AlertCircle size={17}/><div><strong>Investigation could not complete</strong><span>{runError}</span></div></div>}{running && <LoadingAnalysis mode={mode} />}{result && <InvestigationResult result={result} incident={selectedIncident} detail={detail} onResolutionRecorded={recordResolution} onDataChanged={onDataChanged} notify={notify} />}{!result && detail?.verified_resolutions?.length > 0 && <EngineerReviewPanel result={null} incident={selectedIncident} detail={detail} onResolutionRecorded={recordResolution} onDataChanged={onDataChanged} notify={notify} />}{!running && !result && !runError && !detail?.verified_resolutions?.length && <div className="panel analysis-placeholder"><div className="placeholder-visual"><div className="placeholder-orbit orbit-one"/><div className="placeholder-orbit orbit-two"/><div className="placeholder-core"><BrainCircuit size={27}/></div><span className="orbit-node node-one"/><span className="orbit-node node-two"/><span className="orbit-node node-three"/></div><div className="section-kicker">READY TO INVESTIGATE</div><h2>Evidence in. Clarity out.</h2><p>Run an investigation to analyze current signals{mode === 'on' ? ' alongside relevant Hindsight memory.' : ' without retrieving Hindsight memory.'}</p><button className="button button-primary" onClick={runInvestigation}><Sparkles size={15}/> Start {mode === 'on' ? 'memory-on' : 'memory-off'} analysis</button><span className="placeholder-foot"><ShieldCheck size={13}/>Recommendations always require engineer review</span></div>}</div>
     </div>}
   </>
 }
@@ -469,6 +469,7 @@ function EngineerReviewPanel({ result, incident, detail, onResolutionRecorded, o
   const [resolutionBusy, setResolutionBusy] = useState(false)
   const [resolutionError, setResolutionError] = useState('')
   const [resolutionResult, setResolutionResult] = useState(null)
+  const [retentionBusy, setRetentionBusy] = useState(false)
   const [attemptedAction, setAttemptedAction] = useState('')
   const [outcome, setOutcome] = useState('')
   const [recordedBy, setRecordedBy] = useState('')
@@ -486,7 +487,7 @@ function EngineerReviewPanel({ result, incident, detail, onResolutionRecorded, o
           resolution_summary: resolution,
           verified_by: verifiedBy,
           confirmed,
-          investigation_run_id: result.investigation_id,
+          ...(result ? { investigation_run_id: result.investigation_id } : {}),
         }),
       })
       setResolutionResult(saved)
@@ -495,14 +496,32 @@ function EngineerReviewPanel({ result, incident, detail, onResolutionRecorded, o
         ? 'Verified resolution saved; Hindsight retain reported success.'
         : saved.memory_retention_status === 'skipped_duplicate'
           ? 'Verified resolution saved; Hindsight safely skipped a duplicate memory.'
-          : `Verified resolution saved, but Hindsight retention failed${saved.memory_error_category ? ` (${saved.memory_error_category})` : ''}. No memory-learning success is claimed.`
-      notify(saved.memory_retention_status === 'failed' ? 'error' : 'success', statusMessage)
+          : saved.memory_retention_status === 'failed'
+            ? `Verified resolution saved, but Hindsight retention failed${saved.memory_error_category ? ` (${saved.memory_error_category})` : ''}. No memory-learning success is claimed.`
+            : 'Verified resolution saved, but the Hindsight retention result is unknown. No memory-learning success is claimed.'
+      notify(saved.memory_retention_status === 'failed' || !saved.memory_retention_status ? 'error' : 'success', statusMessage)
     } catch (error) { setResolutionError(error.message) }
     finally { setResolutionBusy(false) }
   }
 
-  async function submitFailedApproach(event) {
-    event.preventDefault(); setFailureBusy(true); setFailureError('')
+  async function retryResolutionRetention() {
+    setRetentionBusy(true); setResolutionError('')
+    try {
+      const saved = await api(`/incidents/${incident.id}/resolution/retain`, { method: 'POST' })
+      setResolutionResult(saved)
+      await onResolutionRecorded(incident.id, saved.memory_retention_status)
+      const statusMessage = saved.memory_retention_status === 'success'
+        ? 'Hindsight retain reported success for the saved verified resolution.'
+        : saved.memory_retention_status === 'skipped_duplicate'
+          ? 'Hindsight safely skipped an already-retained verified resolution.'
+          : `Hindsight retention is still unavailable${saved.memory_error_category ? ` (${saved.memory_error_category})` : ''}.`
+      notify(saved.memory_retention_status === 'failed' || !saved.memory_retention_status ? 'error' : 'success', statusMessage)
+    } catch (error) { setResolutionError(error.message) }
+    finally { setRetentionBusy(false) }
+  }
+
+  async function submitFailedApproach() {
+    setFailureBusy(true); setFailureError('')
     try {
       const saved = await api(`/incidents/${incident.id}/failed-approaches`, {
         method: 'POST',
@@ -510,7 +529,7 @@ function EngineerReviewPanel({ result, incident, detail, onResolutionRecorded, o
           attempted_action: attemptedAction,
           outcome,
           recorded_by: recordedBy,
-          investigation_run_id: result.investigation_id,
+          ...(result ? { investigation_run_id: result.investigation_id } : {}),
         }),
       })
       setFailureResult(saved)
@@ -518,31 +537,39 @@ function EngineerReviewPanel({ result, incident, detail, onResolutionRecorded, o
         ? 'Failed approach retained in Hindsight as a separate failure memory.'
         : saved.memory_retention_status === 'skipped_duplicate'
           ? 'This failed approach was already retained; duplicate safely skipped.'
-          : `Failed approach was submitted, but Hindsight retention failed${saved.memory_error_category ? ` (${saved.memory_error_category})` : ''}.`
-      notify(saved.memory_retention_status === 'failed' ? 'error' : 'success', statusMessage)
+          : saved.memory_retention_status === 'failed'
+            ? `Failed approach was submitted, but Hindsight retention failed${saved.memory_error_category ? ` (${saved.memory_error_category})` : ''}.`
+            : 'The failed-approach retention result is unknown; no learning success is claimed.'
+      notify(saved.memory_retention_status === 'failed' || !saved.memory_retention_status ? 'error' : 'success', statusMessage)
       onDataChanged()
     } catch (error) { setFailureError(error.message) }
     finally { setFailureBusy(false) }
   }
 
   const existingResolution = detail?.verified_resolutions?.[0]
+  const displayedResolution = resolutionResult
+    ? detail?.verified_resolutions?.find((item) => item.id === resolutionResult.resolution_id) || existingResolution
+    : existingResolution
   const alreadyResolved = Boolean(resolutionResult || existingResolution)
-  const retentionStatus = resolutionResult?.memory_retention_status || detail?.memory_retention_status || null
+  const retentionStatus = resolutionResult
+    ? resolutionResult.memory_retention_status ?? null
+    : detail?.memory_retention_status ?? null
   return <section className="panel engineer-review-panel" aria-labelledby="engineer-review-heading">
-    <div className="panel-heading"><div><div className="section-kicker">HUMAN-IN-THE-LOOP · RUN {result.investigation_id.slice(0, 8).toUpperCase()}</div><h2 id="engineer-review-heading">Engineer review</h2><p>AI findings stay hypotheses until an engineer explicitly confirms a verified outcome.</p></div><ShieldCheck size={18} className="heading-accent"/></div>
-    {alreadyResolved ? <div className="review-saved-state"><div className="review-status-line"><CheckCircle2 size={16}/><strong>Verified resolution recorded</strong>{retentionStatus && <span className={`retention-pill ${retentionStatus}`}>Hindsight retain: {retentionStatus.replace('_', ' ')}</span>}</div><p><b>Root cause:</b> {resolutionResult ? rootCause : existingResolution?.root_cause_summary || detail?.root_cause_summary || 'See the verified incident record.'}</p>{existingResolution?.resolution_summary && <p><b>Resolution:</b> {existingResolution.resolution_summary}</p>}{retentionStatus === 'failed' && <p className="review-warning">The incident record is resolved, but the API reported that Hindsight retention failed. Do not treat the resolution as learned memory.</p>}</div> : <form className="engineer-review-form" onSubmit={submitResolution}>
+    <div className="panel-heading"><div><div className="section-kicker">{result ? `HUMAN-IN-THE-LOOP · RUN ${result.investigation_id.slice(0, 8).toUpperCase()}` : 'PERSISTED VERIFIED RESOLUTION'}</div><h2 id="engineer-review-heading">Engineer review</h2><p>AI findings stay hypotheses until an engineer explicitly confirms a verified outcome.</p></div><ShieldCheck size={18} className="heading-accent"/></div>
+    {alreadyResolved ? <div className="review-saved-state"><div className="review-status-line"><CheckCircle2 size={16}/><strong>Verified resolution recorded</strong><span className={`retention-pill ${retentionStatus || 'unknown'}`}>Hindsight retain: {retentionStatus ? retentionStatus.replace('_', ' ') : 'status unknown'}</span></div><p><b>Root cause:</b> {displayedResolution?.root_cause_summary || rootCause || detail?.root_cause_summary || 'See the verified incident record.'}</p>{displayedResolution?.resolution_summary && <p><b>Resolution:</b> {displayedResolution.resolution_summary}</p>}{retentionStatus !== 'success' && retentionStatus !== 'skipped_duplicate' && <><p className="review-warning">{retentionStatus === 'failed' ? 'The incident record is resolved, but Hindsight retention failed. Do not treat the resolution as learned memory.' : 'No retention result is recorded for this resolution. Do not treat it as learned memory.'}</p><button type="button" className="button button-secondary button-small" onClick={retryResolutionRetention} disabled={retentionBusy}>{retentionBusy ? <><LoaderCircle size={14} className="spin"/> Retrying retention…</> : <><RefreshCw size={14}/> Retry Hindsight retention</>}</button></>}{resolutionError && <div className="inline-error"><AlertCircle size={15}/>{resolutionError}</div>}</div> : <form className="engineer-review-form" onSubmit={submitResolution}>
       <div className="review-form-intro"><span className="provenance-tag provenance-amber"><i/>AI hypotheses are not verified facts</span><span>Complete only after checking the outcome in your synthetic/local environment.</span></div>
       <div className="form-grid"><Field label="Verified root cause" required full><textarea required minLength="1" maxLength="20000" rows="3" value={rootCause} onChange={(event) => setRootCause(event.target.value)} placeholder="Enter the cause you verified from the available evidence." /></Field><Field label="Resolution applied and verified" required full><textarea required minLength="1" maxLength="20000" rows="3" value={resolution} onChange={(event) => setResolution(event.target.value)} placeholder="Describe the corrective action actually applied and how it was verified." /></Field><Field label="Engineer display name · not authenticated" required><input required maxLength="150" value={verifiedBy} onChange={(event) => setVerifiedBy(event.target.value)} placeholder="Name for the audit record" /></Field><div className="review-identity-note">A typed name is recorded as supplied; this app does not authenticate identity.</div></div>
       <label className="confirmation-check"><input type="checkbox" checked={confirmed} onChange={(event) => setConfirmed(event.target.checked)} /><span>I explicitly confirm that this root cause and resolution are verified.</span></label>
       {resolutionError && <div className="inline-error"><AlertCircle size={15}/>{resolutionError}</div>}
       <div className="form-actions"><span>Only this explicit confirmation calls the verified-resolution endpoint and requests Hindsight retention.</span><button className="button button-primary" disabled={resolutionBusy || !confirmed || !rootCause.trim() || !resolution.trim() || !verifiedBy.trim()}>{resolutionBusy ? <><LoaderCircle size={15} className="spin"/> Saving & retaining…</> : <><ShieldCheck size={15}/> Confirm verified resolution</>}</button></div>
     </form>}
-    {resolutionResult && <div className={`retention-result ${retentionStatus}`} role="status"><span>{retentionStatus === 'success' ? 'HINDSIGHT RETAIN SUCCEEDED' : retentionStatus === 'skipped_duplicate' ? 'DUPLICATE RETENTION SKIPPED' : 'HINDSIGHT RETAIN FAILED'}</span><p>{retentionStatus === 'success' ? 'The API reported that the verified resolution was retained.' : retentionStatus === 'skipped_duplicate' ? 'The API reported an existing stable memory; no duplicate retain was performed.' : `The resolution is recorded, but the memory operation failed${resolutionResult.memory_error_category ? ` (${resolutionResult.memory_error_category})` : ''}.`}</p></div>}
+    {resolutionResult && <div className={`retention-result ${retentionStatus || 'unknown'}`} role="status"><span>{retentionStatus === 'success' ? 'HINDSIGHT RETAIN SUCCEEDED' : retentionStatus === 'skipped_duplicate' ? 'DUPLICATE RETENTION SKIPPED' : retentionStatus === 'failed' ? 'HINDSIGHT RETAIN FAILED' : 'HINDSIGHT RETENTION STATUS UNKNOWN'}</span><p>{retentionStatus === 'success' ? 'The API reported that the verified resolution was retained.' : retentionStatus === 'skipped_duplicate' ? 'The API reported an existing stable memory; no duplicate retain was performed.' : retentionStatus === 'failed' ? `The resolution is recorded, but the memory operation failed${resolutionResult.memory_error_category ? ` (${resolutionResult.memory_error_category})` : ''}.` : 'No retention result was returned. Do not treat this resolution as learned memory.'}</p></div>}
     <details className="failed-approach-details"><summary><span><ArrowDownRight size={15}/> Record an unsuccessful troubleshooting approach</span><small>Separate failure memory · optional</small></summary>
-      {failureResult ? <div className={`retention-result ${failureResult.memory_retention_status}`} role="status"><span>{failureResult.memory_retention_status === 'success' ? 'FAILED APPROACH RETAINED' : failureResult.memory_retention_status === 'skipped_duplicate' ? 'DUPLICATE SKIPPED' : 'RETENTION FAILED'}</span><p>{failureResult.memory_retention_status === 'success' ? 'Hindsight reported success for a separate failed-approach memory.' : failureResult.memory_retention_status === 'skipped_duplicate' ? 'The stable memory already exists; no duplicate retain was performed.' : `The approach was submitted, but Hindsight retention failed${failureResult.memory_error_category ? ` (${failureResult.memory_error_category})` : ''}.`}</p></div> : <form className="engineer-review-form failed-approach-form" onSubmit={submitFailedApproach}>
+      {failureResult && <div className={`retention-result ${failureResult.memory_retention_status || 'unknown'}`} role="status"><span>{failureResult.memory_retention_status === 'success' ? 'FAILED APPROACH RETAINED' : failureResult.memory_retention_status === 'skipped_duplicate' ? 'DUPLICATE SKIPPED' : failureResult.memory_retention_status === 'failed' ? 'RETENTION FAILED' : 'RETENTION STATUS UNKNOWN'}</span><p>{failureResult.memory_retention_status === 'success' ? 'Hindsight reported success for a separate failed-approach memory.' : failureResult.memory_retention_status === 'skipped_duplicate' ? 'The stable memory already exists; no duplicate retain was performed.' : failureResult.memory_retention_status === 'failed' ? `The approach was submitted, but Hindsight retention failed${failureResult.memory_error_category ? ` (${failureResult.memory_error_category})` : ''}. The form values remain available for retry.` : 'No retention result was returned. Do not treat this approach as learned memory.'}</p></div>}
+      {(!failureResult || !['success', 'skipped_duplicate'].includes(failureResult.memory_retention_status)) && <form className="engineer-review-form failed-approach-form" onSubmit={(event) => { event.preventDefault(); submitFailedApproach() }}>
         <div className="form-grid"><Field label="Troubleshooting action tried" required full><textarea required maxLength="10000" rows="2" value={attemptedAction} onChange={(event) => setAttemptedAction(event.target.value)} placeholder="What action was attempted?" /></Field><Field label="Observed outcome" required full><textarea required maxLength="10000" rows="2" value={outcome} onChange={(event) => setOutcome(event.target.value)} placeholder="What happened, and why was this approach unsuccessful?" /></Field><Field label="Engineer display name · not authenticated" required><input required maxLength="150" value={recordedBy} onChange={(event) => setRecordedBy(event.target.value)} placeholder="Name for the audit record" /></Field><div className="review-identity-note">A typed name is not identity verification.</div></div>
         {failureError && <div className="inline-error"><AlertCircle size={15}/>{failureError}</div>}
-        <div className="form-actions"><span>Stored as historical failure context, not as a guaranteed outcome.</span><button className="button button-secondary" disabled={failureBusy || !attemptedAction.trim() || !outcome.trim() || !recordedBy.trim()}>{failureBusy ? <><LoaderCircle size={15} className="spin"/> Recording…</> : <><Plus size={14}/> Record failed approach</>}</button></div>
+        <div className="form-actions"><span>Stored as historical failure context, not as a guaranteed outcome.</span><button className="button button-secondary" disabled={failureBusy || !attemptedAction.trim() || !outcome.trim() || !recordedBy.trim()}>{failureBusy ? <><LoaderCircle size={15} className="spin"/> Retrying…</> : <><Plus size={14}/>{failureResult ? 'Retry retention' : 'Record failed approach'}</>}</button></div>
       </form>}
     </details>
   </section>
@@ -599,9 +626,11 @@ function MemoryPage({ incidents, selectedIncidentId, setSelectedIncidentId, onNa
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   useEffect(() => {
-    if (!selectedIncidentId) { setEntries(null); return }
+    if (!selectedIncidentId) { setEntries(null); setLoading(false); setError(''); return }
+    let active = true
     setLoading(true); setError('')
-    api(`/incidents/${selectedIncidentId}/memories`).then((data) => setEntries(data.entries || [])).catch((requestError) => { setEntries(null); setError(requestError.message) }).finally(() => setLoading(false))
+    api(`/incidents/${selectedIncidentId}/memories`).then((data) => { if (active) setEntries(data.entries || []) }).catch((requestError) => { if (active) { setEntries(null); setError(requestError.message) } }).finally(() => { if (active) setLoading(false) })
+    return () => { active = false }
   }, [selectedIncidentId])
   return <><PageHeading eyebrow="PERSISTENT CONTEXT · HINDSIGHT" title="Memory explorer" subtitle="Inspect historical knowledge retrieved for a real incident. Memory supports investigation; it does not prove current root cause." action={<div className="memory-bank-status"><span className="status-pulse violet-pulse"/>{hindsightBankLabel(health)}</div>} />
     <div className="memory-query-bar panel"><div><div className="section-kicker">RECALL CONTEXT</div><span>Select an incident to make an actual Hindsight recall request.</span></div><div className="select-shell"><SquareActivity size={15}/><select value={selectedIncidentId} onChange={(event) => setSelectedIncidentId(event.target.value)} aria-label="Select incident for memory recall"><option value="">Select incident…</option>{incidents.map((item) => <option key={item.id} value={item.id}>{item.incident_number} · {item.title}</option>)}</select><ChevronDown size={15}/></div></div>
@@ -648,7 +677,7 @@ function PostmortemPage({ incidents, notify, onNavigate }) {
     setGeneratingId(incidentId)
     try {
       const data = await api(`/incidents/${incidentId}/postmortem`, { method: 'POST' })
-      notify('success', 'Postmortem generated from verified incident record.')
+      notify('success', 'Postmortem checked against the latest verified incident record.')
       await loadPostmortems()
       setSelectedPm(data)
       setViewMode('rendered')
@@ -659,18 +688,30 @@ function PostmortemPage({ incidents, notify, onNavigate }) {
     }
   }
 
-  function downloadPostmortem(pm) {
+  async function downloadPostmortem(pm) {
     if (!pm?.id) return
-    const blob = createPostmortemMarkdownBlob(pm.body_markdown)
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `postmortem-${pm.incident_number || pm.id.slice(0, 8)}.md`
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    URL.revokeObjectURL(url)
-    notify('success', 'Postmortem markdown downloaded.')
+    try {
+      const response = await fetch(`${API_ROOT}/postmortems/${pm.id}/download`)
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}))
+        const message = body?.detail?.message || body?.detail || 'The postmortem download could not be completed.'
+        throw new Error(typeof message === 'string' ? message : 'The postmortem download could not be completed.')
+      }
+      const blob = await response.blob()
+      const disposition = response.headers.get('content-disposition') || ''
+      const filename = disposition.match(/filename="([^"]+)"/i)?.[1] || `postmortem-${pm.incident_number || pm.id.slice(0, 8)}.md`
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = filename
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.setTimeout(() => URL.revokeObjectURL(url), 0)
+      setSelectedPm((current) => current?.id === pm.id ? { ...current, downloaded_count: (current.downloaded_count || 0) + 1 } : current)
+      setPostmortems((current) => current.map((item) => item.id === pm.id ? { ...item, downloaded_count: (item.downloaded_count || 0) + 1 } : item))
+      notify('success', 'Postmortem markdown downloaded.')
+    } catch (error) { notify('error', error.message) }
   }
 
   const resolvedIncidents = incidents.filter((inc) => inc.status === 'resolved')
@@ -692,6 +733,13 @@ function PostmortemPage({ incidents, notify, onNavigate }) {
                 onClick={() => setViewMode((m) => (m === 'rendered' ? 'raw' : 'rendered'))}
               >
                 {viewMode === 'rendered' ? 'Raw markdown' : 'Formatted view'}
+              </button>
+              <button
+                className="button button-secondary button-small"
+                disabled={generatingId === selectedPm.incident_id}
+                onClick={() => generatePostmortem(selectedPm.incident_id)}
+              >
+                {generatingId === selectedPm.incident_id ? <><LoaderCircle size={13} className="spin"/> Updating…</> : 'Refresh from latest resolution'}
               </button>
               <button
                 className="button button-primary button-small"

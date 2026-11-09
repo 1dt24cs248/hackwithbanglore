@@ -48,10 +48,29 @@ test('Postmortem Page is wired and supports generation and download', () => {
   assert.match(appSource, /<PostmortemPage[^>]*incidents=\{incidents\}/)
   assert.match(appSource, /\/incidents\/\$\{incidentId\}\/postmortem/)
   assert.match(appSource, /\/postmortems/)
+  assert.match(appSource, /\/postmortems\/\$\{pm\.id\}\/download/)
+  assert.match(appSource, /Refresh from latest resolution/)
+  assert.doesNotMatch(appSource, /createPostmortemMarkdownBlob\(pm\.body_markdown\)/)
   assert.match(appSource, /ENGINEER-VERIFIED INCIDENT RECORD/)
   assert.match(appSource, /AUDIT REFERENCE ONLY/)
   assert.match(appSource, /parsePostmortemMarkdown\(content\)/)
-  assert.match(appSource, /createPostmortemMarkdownBlob\(pm\.body_markdown\)/)
+})
+
+test('Failed or missing Hindsight retention can be retried from persisted incident data', () => {
+  const appSource = readFileSync(new URL('./App.jsx', import.meta.url), 'utf8')
+  assert.match(appSource, /\/incidents\/\$\{incident\.id\}\/resolution\/retain/)
+  assert.match(appSource, /Retry Hindsight retention/)
+  assert.match(appSource, /detail\?\.verified_resolutions\?\.length > 0/)
+  assert.match(appSource, /status unknown/)
+  assert.match(appSource, /failureResult \? 'Retry retention'/)
+})
+
+test('README API port matches the existing frontend default', () => {
+  const appSource = readFileSync(new URL('./App.jsx', import.meta.url), 'utf8')
+  const readme = readFileSync(new URL('../../README.md', import.meta.url), 'utf8')
+  assert.match(appSource, /127\.0\.0\.1:8000\/api/)
+  assert.match(readme, /127\.0\.0\.1:8000\/api/)
+  assert.match(readme, /--port 8000/)
 })
 
 test('Postmortem Markdown preview parses headings, emphasis, code, lists, quotes, and rules', () => {
@@ -88,4 +107,3 @@ test('Postmortem Markdown download preserves valid source syntax unchanged', asy
   assert.equal(await blob.text(), markdown)
   assert.deepEqual(parseInlineMarkdown('**label** `value`').map((token) => token.type), ['strong', 'text', 'code'])
 })
-

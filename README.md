@@ -79,10 +79,10 @@ Edit `backend/.env` with local PostgreSQL connection details and provider creden
 
 ```powershell
 alembic upgrade head
-uvicorn app.main:app --host 127.0.0.1 --port 8001
+uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
-The API is available at `http://127.0.0.1:8001`; interactive API documentation is at `/docs`.
+The API is available at `http://127.0.0.1:8000`; interactive API documentation is at `/docs`.
 
 ## Frontend setup
 
@@ -94,7 +94,7 @@ npm ci
 npm run dev
 ```
 
-The Vite development server listens on `http://127.0.0.1:5173` (it can use 5174 or 5175 if the port is occupied; the backend CORS list allows those local ports). The frontend defaults to the API at `http://127.0.0.1:8001/api`. For a different backend URL, set `VITE_API_BASE_URL` before starting Vite. Do not put secrets in `VITE_*` variables.
+The Vite development server listens on `http://127.0.0.1:5173` (it can use 5174 or 5175 if the port is occupied; the backend CORS list allows those local ports). The frontend defaults to the API at `http://127.0.0.1:8000/api`. For a different backend URL, set `VITE_API_BASE_URL` before starting Vite. Do not put secrets in `VITE_*` variables.
 
 ## Tests and production build
 
@@ -132,6 +132,10 @@ The minimum viable production integration is an established OIDC identity provid
 5. Review the actual returned Hindsight memories and provenance. Empty recall is shown as empty; historical information is not proof of the new incident's cause. Failed approaches are warnings only when Hindsight returns the corresponding tagged memory.
 
 The browser stores only the IDs and retain state of the demo fixtures to avoid accidental repeats, and also checks exact server-side fixture records before creating a new sample. Provider connectivity is still dependent on local configuration; automated tests use mocks and do not verify live Hindsight or Groq operations. Do not use this unauthenticated app with real production incidents or expose it publicly.
+
+## Postmortems
+
+The Postmortems page generates a Markdown record from the latest engineer-verified resolution, retains prior postmortem revisions as archived records when the verified resolution changes, and downloads through the backend so download counts are recorded. The Hindsight section reports the recorded retain outcome; a failed or missing retain result is not described as learned memory.
 
 ## Synthetic demonstration data
 
