@@ -69,3 +69,4 @@ temp/
 
 # Additional caches
 .pytest_cache/
+.vercel

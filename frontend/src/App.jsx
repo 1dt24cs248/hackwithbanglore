@@ -9,7 +9,7 @@ import {
 import { hindsightBankLabel } from './providerStatus.js'
 import { parsePostmortemMarkdown } from './postmortemMarkdown.js'
 
-const API_ROOT = (import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api').replace(/\/$/, '')
+const API_ROOT = (import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD ? '/api' : 'http://127.0.0.1:8000/api')).replace(/\/$/, '')
 const DATA_LABEL = import.meta.env.VITE_DATA_LABEL
 const DEMO_STORAGE_KEY = 'incidentiq.synthetic-demo.v1'
 const DEMO_FIXTURES = {
@@ -57,7 +57,9 @@ function readDemoProgress() {
 async function api(path, options = {}) {
   let response
   try {
-    const url = path === '/health' ? `${new URL(API_ROOT).origin}/health` : `${API_ROOT}${path}`
+    const url = path === '/health'
+      ? `${import.meta.env.PROD && !import.meta.env.VITE_API_BASE_URL ? '' : new URL(API_ROOT, window.location.origin).origin}/health`
+      : `${API_ROOT}${path}`
     response = await fetch(url, {
       ...options,
       headers: { 'Content-Type': 'application/json', ...options.headers },
