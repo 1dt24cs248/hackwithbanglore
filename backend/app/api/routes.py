@@ -29,11 +29,17 @@ from app.schemas.investigation import (
     EngineerFeedbackInput,
     VerifiedResolutionInput,
 )
+from app.services.incident_library import (
+    get_incident as get_library_incident,
+    investigation_submission,
+    list_incidents as list_library_incidents,
+    catalog_summary,
+    library_categories,
+)
 from app.services.hindsight_service import HindsightMemoryService
 from app.services.investigation_service import InvestigationService, InvestigationServiceError
 
 router = APIRouter(prefix="/api", tags=["IncidentIQ"])
-
 
 class FeedbackRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
@@ -101,6 +107,56 @@ def _envelope(data: Any) -> dict[str, Any]:
     if isinstance(data, BaseModel):
         data = data.model_dump(mode="json")
     return {"success": True, "data": data}
+
+
+@router.get("/library/incidents")
+def list_library(
+    page: int = Query(default=1, ge=1),
+    limit: int = Query(default=12, ge=1, le=50),
+    search: str | None = Query(default=None, max_length=200),
+    company: str | None = Query(default=None, max_length=120),
+    category: str | None = Query(default=None, max_length=100),
+    year: int | None = Query(default=None, ge=1990, le=2100),
+    severity: str | None = Query(default=None, pattern="^(critical|high|medium|low)$"),
+    service: str | None = Query(default=None, max_length=150),
+    incident_type: str | None = Query(default=None, max_length=80),
+    verification_status: str = Query(default="verified", pattern="^(verified|partially_verified|needs_review|rejected)$"),
+) -> dict[str, Any]:
+    """List only source-verified incidents with server-side pagination and filters."""
+    return _envelope(list_library_incidents(
+        page=page, limit=limit, search=search, company=company, category=category,
+        year=year, severity=severity, service=service, incident_type=incident_type,
+        verification_status=verification_status,
+    ))
+
+
+@router.get("/library/summary")
+def library_summary() -> dict[str, Any]:
+    return _envelope(catalog_summary(library_categories()))
+
+
+@router.get("/library/incidents/{incident_id}")
+def library_detail(incident_id: str) -> dict[str, Any]:
+    record = get_library_incident(incident_id)
+    if record is None:
+        raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Verified library incident was not found."})
+    return _envelope(record.model_dump(mode="json"))
+
+
+@router.post("/library/incidents/{incident_id}/load", status_code=status.HTTP_201_CREATED)
+def load_library_incident(
+    incident_id: str,
+    service: InvestigationService = Depends(get_investigation_service),
+) -> dict[str, Any]:
+    """Create an operational record from evidence-only fields for the existing investigation UI."""
+    record = get_library_incident(incident_id)
+    if record is None:
+        raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Verified library incident was not found."})
+    try:
+        created = service.submit_incident(investigation_submission(record))
+    except InvestigationServiceError as error:
+        raise _fail(error) from None
+    return _envelope({"library_incident_id": record.id, **created.model_dump(mode="json")})
 
 
 @router.post("/incidents", status_code=status.HTTP_201_CREATED)

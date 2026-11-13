@@ -1,0 +1,3016 @@
+[
+  {
+    "severity": "critical",
+    "severity_basis": "Global 502 responses with an 82% worst-point traffic drop; classification is IncidentIQ's.",
+    "environment": "production",
+    "reported_errors": [
+      "HTTP 502 Bad Gateway"
+    ],
+    "documented_metrics": [
+      {
+        "name": "traffic_drop_at_worst",
+        "value": 82,
+        "unit": "percent",
+        "scope": "Cloudflare network traffic",
+        "evidence": "Postmortem reports traffic dropped by 82% at worst."
+      }
+    ],
+    "infrastructure": [
+      "Edge servers",
+      "Regular expression engine"
+    ],
+    "dependencies": [],
+    "trigger": null,
+    "customers_affected": null,
+    "financial_impact": "Not disclosed in the official incident report.",
+    "sla_impact": "Not disclosed in the official incident report.",
+    "data_gaps": [
+      "Exact start/end recovery timestamps beyond the approximate duration are not recorded here."
+    ],
+    "verification_status": "verified",
+    "source_publication_date": "2019-07-02",
+    "last_verified_at": "2026-11-13",
+    "id": "cloudflare-2019-07-cpu-502",
+    "company": "Cloudflare",
+    "title": "Global HTTP 502 service disruption",
+    "incident_date": "2019-07-02",
+    "start_time": "13:42 UTC",
+    "end_time": null,
+    "duration": "About 30 minutes",
+    "affected_products": [
+      "Cloudflare CDN",
+      "Cloudflare-proxied websites"
+    ],
+    "affected_services": [
+      "Cloudflare CDN"
+    ],
+    "category": "CPU exhaustion",
+    "incident_type": "outage",
+    "tags": [
+      "CPU exhaustion"
+    ],
+    "investigation_summary": "Cloudflare-proxied sites returned HTTP 502 responses worldwide during a short service outage. The company reported peak traffic fell by 82%.",
+    "symptoms": [
+      "HTTP 502 responses",
+      "CPU reached 100% worldwide"
+    ],
+    "technical_root_cause": "A deployed regular expression caused CPU utilization to spike to 100% across machines worldwide; Cloudflare rolled back the deployment.",
+    "customer_impact": "Visitors to Cloudflare-proxied sites received 502 errors; traffic fell by 82% at the worst point.",
+    "business_impact": "Visitors to Cloudflare-proxied sites received 502 errors; traffic fell by 82% at the worst point.",
+    "recovery_actions": [
+      "Rolled back the bad software deployment; service returned to normal."
+    ],
+    "preventive_actions": [
+      "Review the deployment and testing process; the short postmortem says a full review was underway."
+    ],
+    "sources": [
+      {
+        "url": "https://blog.cloudflare.com/cloudflare-outage/",
+        "source_type": "postmortem",
+        "publication_date": "2019-07-02",
+        "status_url": null,
+        "evidence_notes": "The official postmortem identifies 502 errors, 100% CPU and an 82% traffic drop, and attributes the event to a bad software deployment. It describes rollback.",
+        "verified_at": "2026-11-13"
+      }
+    ]
+  },
+  {
+    "severity": "high",
+    "severity_basis": "IncidentIQ demo classification based on the documented production availability impact; this is not the company's severity label.",
+    "environment": "production",
+    "reported_errors": [],
+    "documented_metrics": [
+      {
+        "name": "incident_duration",
+        "value": 261,
+        "unit": "minutes",
+        "scope": "Dashboard/API",
+        "evidence": "Start 15:31 UTC; Dashboard/API restored at 19:52 UTC."
+      }
+    ],
+    "infrastructure": [
+      "Core data center",
+      "External fiber links",
+      "Patch panel"
+    ],
+    "dependencies": [],
+    "trigger": null,
+    "customers_affected": null,
+    "financial_impact": "Not disclosed in the official incident report.",
+    "sla_impact": "Not disclosed in the official incident report.",
+    "data_gaps": [
+      "Customer count and financial/SLA impact are not disclosed."
+    ],
+    "verification_status": "verified",
+    "source_publication_date": "2020-04-16",
+    "last_verified_at": "2026-11-13",
+    "id": "cloudflare-2020-04-dashboard-api",
+    "company": "Cloudflare",
+    "title": "Cloudflare Dashboard and API availability incident",
+    "incident_date": "2020-04-15",
+    "start_time": "15:31 UTC",
+    "end_time": "19:52 UTC",
+    "duration": "4 hours 21 minutes to Dashboard/API recovery; full redundancy at 20:31 UTC",
+    "affected_products": [
+      "Cloudflare Dashboard",
+      "Cloudflare API",
+      "Cloudflare edge proxy",
+      "Cloudflare security services"
+    ],
+    "affected_services": [
+      "Cloudflare Dashboard",
+      "Cloudflare API"
+    ],
+    "category": "Network outages",
+    "incident_type": "outage",
+    "tags": [
+      "Network outages"
+    ],
+    "investigation_summary": "Cloudflare Dashboard and API requests failed for several hours. Edge proxying and several customer-facing security functions continued to operate.",
+    "symptoms": [
+      "Dashboard login unavailable",
+      "API unavailable",
+      "Customers could not make configuration changes, purge cache, or access some analytics"
+    ],
+    "technical_root_cause": "During planned cabinet retirement, technicians disconnected a patch panel providing external connectivity from a core data center; the patch panel was a physical single point of failure.",
+    "customer_impact": "Dashboard and API unavailable 15:31–19:52 UTC. Core customer website proxying and several security products continued normally.",
+    "business_impact": "Dashboard and API unavailable 15:31–19:52 UTC. Core customer website proxying and several security products continued normally.",
+    "recovery_actions": [
+      "Restored connectivity links; first backup link had 10 Gbps capacity; restored the Dashboard/API and then full redundant connectivity."
+    ],
+    "preventive_actions": [
+      "Distribute connectivity across physical panels; label cables/panels; explicitly identify cabling that maintenance must not touch."
+    ],
+    "sources": [
+      {
+        "url": "https://blog.cloudflare.com/cloudflare-dashboard-and-api-outage-on-april-15-2020/",
+        "source_type": "postmortem",
+        "publication_date": "2020-04-16",
+        "status_url": null,
+        "evidence_notes": "Official report states the maintenance task disconnected a patch panel; dashboard/API were unavailable 15:31–19:52 UTC, while edge proxy/security continued. A backup link was 10 Gbps.",
+        "verified_at": "2026-11-13"
+      }
+    ]
+  },
+  {
+    "severity": "critical",
+    "severity_basis": "IncidentIQ demo classification based on the documented production availability impact; this is not the company's severity label.",
+    "environment": "production",
+    "reported_errors": [],
+    "documented_metrics": [
+      {
+        "name": "affected_data_centers",
+        "value": 19,
+        "unit": "data centers",
+        "scope": "Cloudflare MCP network",
+        "evidence": "Postmortem states 19 data centers were affected."
+      },
+      {
+        "name": "affected_locations_share_network",
+        "value": 4,
+        "unit": "percent",
+        "scope": "Cloudflare network locations",
+        "evidence": "Postmortem says these locations were 4% of the total network."
+      },
+      {
+        "name": "affected_share_requests",
+        "value": 50,
+        "unit": "percent",
+        "scope": "Global requests",
+        "evidence": "Postmortem says 19 locations handled 50% of total requests."
+      }
+    ],
+    "infrastructure": [
+      "BGP routers",
+      "MCP data centers",
+      "Multimog load balancer"
+    ],
+    "dependencies": [],
+    "trigger": null,
+    "customers_affected": null,
+    "financial_impact": "Not disclosed in the official incident report.",
+    "sla_impact": "Not disclosed in the official incident report.",
+    "data_gaps": [
+      "Customer count, failed request percentage, revenue, SLA outcome, raw logs and deployment ID not disclosed."
+    ],
+    "verification_status": "verified",
+    "source_publication_date": "2022-06-21",
+    "last_verified_at": "2026-11-13",
+    "id": "cloudflare-2022-06-bgp",
+    "company": "Cloudflare",
+    "title": "Cloudflare global network disruption affecting 19 data centers",
+    "incident_date": "2022-06-21",
+    "start_time": "06:27 UTC",
+    "end_time": "07:42 UTC last revert; incident closed 08:00 UTC",
+    "duration": "75 minutes to last revert; 93 minutes to incident closure",
+    "affected_products": [
+      "Cloudflare CDN",
+      "Cloudflare network"
+    ],
+    "affected_services": [
+      "Cloudflare Network",
+      "Cloudflare CDN"
+    ],
+    "category": "BGP routing failures",
+    "incident_type": "outage",
+    "tags": [
+      "BGP routing failures"
+    ],
+    "investigation_summary": "Customers in 19 Cloudflare data centers experienced failed traffic and origin reachability after a network-configuration rollout reached those locations. Cloudflare reported that the locations handled a large share of its requests.",
+    "symptoms": [
+      "Affected locations became unreachable",
+      "Internal Multimog forwarding between MCP servers stopped",
+      "Smaller clusters overloaded"
+    ],
+    "technical_root_cause": "A BGP advertisement policy term reorder placed REJECT-THE-REST before site-local prefix advertisement terms, withdrawing critical site-local prefixes; Multimog could no longer forward between servers.",
+    "customer_impact": "19 data centers (4% of locations) handled 50% of global requests. Last revert completed at 07:42 UTC; incident closed at 08:00 UTC.",
+    "business_impact": "19 data centers (4% of locations) handled 50% of global requests. Last revert completed at 07:42 UTC; incident closed at 08:00 UTC.",
+    "recovery_actions": [
+      "Engineers used backup procedures to access affected sites, found the routing-policy issue and reverted it."
+    ],
+    "preventive_actions": [
+      "Add MCP-specific tests and rollout procedures; redesign policy to prevent term reordering; improve rollout staggering; add automated commit-confirm rollback."
+    ],
+    "sources": [
+      {
+        "url": "https://blog.cloudflare.com/cloudflare-outage-on-june-21-2022/",
+        "source_type": "postmortem",
+        "publication_date": "2022-06-21",
+        "status_url": "https://www.cloudflarestatus.com/",
+        "evidence_notes": "The official postmortem gives the timeline, 19 data centers, 4%/50% traffic scope, policy ordering and recovery actions.",
+        "verified_at": "2026-11-13"
+      }
+    ]
+  },
+  {
+    "severity": "high",
+    "severity_basis": "IncidentIQ demo classification based on the documented production availability impact; this is not the company's severity label.",
+    "environment": "production",
+    "reported_errors": [],
+    "documented_metrics": [
+      {
+        "name": "duration",
+        "value": 121,
+        "unit": "minutes",
+        "scope": "Several Cloudflare services",
+        "evidence": "Postmortem reports unavailability for 121 minutes."
+      }
+    ],
+    "infrastructure": [
+      "Service-token management",
+      "Workers platform",
+      "CDN control plane"
+    ],
+    "dependencies": [
+      "Service-token authentication"
+    ],
+    "trigger": null,
+    "customers_affected": null,
+    "financial_impact": "Not disclosed in the official incident report.",
+    "sla_impact": "Not disclosed in the official incident report.",
+    "data_gaps": [
+      "No customer count or revenue impact disclosed."
+    ],
+    "verification_status": "verified",
+    "source_publication_date": "2023-01-25",
+    "last_verified_at": "2026-11-13",
+    "id": "cloudflare-2023-01-service-tokens",
+    "company": "Cloudflare",
+    "title": "Cloudflare multi-service availability incident",
+    "incident_date": "2023-01-24",
+    "start_time": null,
+    "end_time": null,
+    "duration": "121 minutes",
+    "affected_products": [
+      "Cloudflare Workers",
+      "Cloudflare Zero Trust",
+      "Cloudflare CDN"
+    ],
+    "affected_services": [
+      "Cloudflare Workers",
+      "Cloudflare Zero Trust",
+      "Cloudflare CDN control plane"
+    ],
+    "category": "Authentication failures",
+    "incident_type": "outage",
+    "tags": [
+      "Authentication failures"
+    ],
+    "investigation_summary": "Several Cloudflare products that depend on service-token authentication became unavailable or degraded for about two hours.",
+    "symptoms": [
+      "Service-token-dependent services degraded",
+      "Workers and Zero Trust features unavailable",
+      "CDN control-plane functions degraded"
+    ],
+    "technical_root_cause": "An error in the release of code managing service tokens disrupted token-based authentication.",
+    "customer_impact": "Multiple products unavailable for 121 minutes; exact customer count and request error percentage not disclosed.",
+    "business_impact": "Multiple products unavailable for 121 minutes; exact customer count and request error percentage not disclosed.",
+    "recovery_actions": [
+      "Cloudflare mitigated the faulty release and restored affected services."
+    ],
+    "preventive_actions": [
+      "Postmortem describes release/validation and service dependency improvements; see source for detailed action list."
+    ],
+    "sources": [
+      {
+        "url": "https://blog.cloudflare.com/cloudflare-incident-on-january-24th-2023",
+        "source_type": "postmortem",
+        "publication_date": "2023-01-25",
+        "status_url": "https://www.cloudflarestatus.com/",
+        "evidence_notes": "The official report states several services were unavailable for 121 minutes because of an error releasing service-token code.",
+        "verified_at": "2026-11-13"
+      }
+    ]
+  },
+  {
+    "severity": "high",
+    "severity_basis": "IncidentIQ demo classification based on the documented production availability impact; this is not the company's severity label.",
+    "environment": "production",
+    "reported_errors": [],
+    "documented_metrics": [
+      {
+        "name": "duration",
+        "value": 37,
+        "unit": "minutes",
+        "scope": "Multiple Cloudflare services",
+        "evidence": "Postmortem states multiple services were unavailable for 37 minutes."
+      }
+    ],
+    "infrastructure": [
+      "Workers KV",
+      "Deployment tool"
+    ],
+    "dependencies": [],
+    "trigger": null,
+    "customers_affected": null,
+    "financial_impact": "Not disclosed in the official incident report.",
+    "sla_impact": "Not disclosed in the official incident report.",
+    "data_gaps": [
+      "Exact user count and financial/SLA impact not disclosed."
+    ],
+    "verification_status": "verified",
+    "source_publication_date": "2023-11-01",
+    "last_verified_at": "2026-11-13",
+    "id": "cloudflare-2023-10-workers-kv",
+    "company": "Cloudflare",
+    "title": "Workers KV and dependent service disruption",
+    "incident_date": "2023-10-30",
+    "start_time": null,
+    "end_time": null,
+    "duration": "37 minutes",
+    "affected_products": [
+      "Workers KV",
+      "Cloudflare services relying on KV"
+    ],
+    "affected_services": [
+      "Cloudflare Workers KV",
+      "Cloudflare services depending on KV"
+    ],
+    "category": "Deployment failures",
+    "incident_type": "outage",
+    "tags": [
+      "Deployment failures"
+    ],
+    "investigation_summary": "Workers KV dependent Cloudflare services were unavailable for 37 minutes; affected products and recovery windows are listed in the report.",
+    "symptoms": [
+      "Workers KV-dependent services unavailable",
+      "Customer-facing data/control-plane features degraded"
+    ],
+    "technical_root_cause": "A misconfiguration in a deployment tool used by Workers KV caused a service outage.",
+    "customer_impact": "Multiple services unavailable for 37 minutes; customer count and request-failure percentage not disclosed.",
+    "business_impact": "Multiple services unavailable for 37 minutes; customer count and request-failure percentage not disclosed.",
+    "recovery_actions": [
+      "Cloudflare corrected the Workers KV deployment-tool configuration and recovered services."
+    ],
+    "preventive_actions": [
+      "Postmortem details deployment-tool safeguards and recovery improvements."
+    ],
+    "sources": [
+      {
+        "url": "https://blog.cloudflare.com/cloudflare-incident-on-october-30-2023/",
+        "source_type": "postmortem",
+        "publication_date": "2023-11-01",
+        "status_url": "https://www.cloudflarestatus.com/",
+        "evidence_notes": "Official postmortem names the deployment tool misconfiguration and 37-minute outage.",
+        "verified_at": "2026-11-13"
+      }
+    ]
+  },
+  {
+    "severity": "high",
+    "severity_basis": "IncidentIQ demo classification based on the documented production availability impact; this is not the company's severity label.",
+    "environment": "production",
+    "reported_errors": [],
+    "documented_metrics": [
+      {
+        "name": "duration",
+        "value": 40.68,
+        "unit": "hours",
+        "scope": "Control plane and analytics",
+        "evidence": "UTC interval from Nov 2 11:44 to Nov 4 04:25, calculated from published timestamps."
+      }
+    ],
+    "infrastructure": [
+      "Core data center",
+      "Disaster-recovery facility"
+    ],
+    "dependencies": [],
+    "trigger": null,
+    "customers_affected": null,
+    "financial_impact": "Not disclosed in the official incident report.",
+    "sla_impact": "Not disclosed in the official incident report.",
+    "data_gaps": [
+      "Financial impact and customer count not disclosed."
+    ],
+    "verification_status": "verified",
+    "source_publication_date": "2023-11-04",
+    "last_verified_at": "2026-11-13",
+    "id": "cloudflare-2023-11-control-plane",
+    "company": "Cloudflare",
+    "title": "Cloudflare control-plane and analytics outage",
+    "incident_date": "2023-11-02",
+    "start_time": "2023-11-02 11:44 UTC",
+    "end_time": "2023-11-04 04:25 UTC",
+    "duration": "40 hours 41 minutes; most control plane restored after 6 hours 13 minutes",
+    "affected_products": [
+      "Cloudflare control plane",
+      "Cloudflare analytics",
+      "Cloudflare edge network"
+    ],
+    "affected_services": [
+      "Cloudflare control plane",
+      "Cloudflare analytics"
+    ],
+    "category": "Cloud infrastructure failures",
+    "incident_type": "outage",
+    "tags": [
+      "Cloud infrastructure failures"
+    ],
+    "investigation_summary": "Cloudflare Dashboard, control-plane functions, analytics, and raw-log access were impaired. The data plane continued serving network and security traffic.",
+    "symptoms": [
+      "Dashboard/control plane unavailable",
+      "Analytics and raw logs unavailable for most customers",
+      "Network/security traffic continued operating"
+    ],
+    "technical_root_cause": "Failure of a core data-center provider exposed non-obvious dependencies in Cloudflare's control plane and analytics recovery architecture.",
+    "customer_impact": "Incident lasted 2023-11-02 11:44 UTC to 2023-11-04 04:25 UTC; most control plane restored at 17:57 UTC on Nov 2.",
+    "business_impact": "Incident lasted 2023-11-02 11:44 UTC to 2023-11-04 04:25 UTC; most control plane restored at 17:57 UTC on Nov 2.",
+    "recovery_actions": [
+      "Restored most control-plane services at a disaster-recovery facility, then brought remaining services back."
+    ],
+    "preventive_actions": [
+      "Postmortem describes dependency mapping, disaster-recovery and architecture changes."
+    ],
+    "sources": [
+      {
+        "url": "https://blog.cloudflare.com/post-mortem-on-cloudflare-control-plane-and-analytics-outage/",
+        "source_type": "postmortem",
+        "publication_date": "2023-11-04",
+        "status_url": "https://www.cloudflarestatus.com/",
+        "evidence_notes": "Official postmortem gives incident interval, partial restore time, raw-log impact and states edge network/security services continued.",
+        "verified_at": "2026-11-13"
+      }
+    ]
+  },
+  {
+    "severity": "high",
+    "severity_basis": "IncidentIQ demo classification based on the documented production availability impact; this is not the company's severity label.",
+    "environment": "production",
+    "reported_errors": [],
+    "documented_metrics": [
+      {
+        "name": "r2_outage_duration",
+        "value": 59,
+        "unit": "minutes",
+        "scope": "R2",
+        "evidence": "Official postmortem states R2 and other products unavailable for 59 minutes."
+      },
+      {
+        "name": "durable_objects_error_increase",
+        "value": 0.09,
+        "unit": "percent",
+        "scope": "North America Durable Objects, 09:13–09:36 UTC",
+        "evidence": "Postmortem reports a 0.09% increase during backlog recovery."
+      }
+    ],
+    "infrastructure": [
+      "R2 Gateway",
+      "Durable Objects"
+    ],
+    "dependencies": [
+      "Cloudflare R2"
+    ],
+    "trigger": null,
+    "customers_affected": null,
+    "financial_impact": "Not disclosed in the official incident report.",
+    "sla_impact": "Not disclosed in the official incident report.",
+    "data_gaps": [
+      "Customer count and monetary impact not disclosed."
+    ],
+    "verification_status": "verified",
+    "source_publication_date": "2025-02-07",
+    "last_verified_at": "2026-11-13",
+    "id": "cloudflare-2025-02-r2",
+    "company": "Cloudflare",
+    "title": "Cloudflare R2 service outage",
+    "incident_date": "2025-02-06",
+    "start_time": null,
+    "end_time": null,
+    "duration": "59 minutes for primary R2 outage; secondary 23-minute window",
+    "affected_products": [
+      "R2",
+      "Stream",
+      "Images",
+      "Cache Reserve",
+      "Vectorize",
+      "Log Delivery"
+    ],
+    "affected_services": [
+      "Cloudflare R2",
+      "Cloudflare Stream",
+      "Cloudflare Images",
+      "Cache Reserve",
+      "Vectorize",
+      "Log Delivery"
+    ],
+    "category": "Storage failures",
+    "incident_type": "outage",
+    "tags": [
+      "Storage failures"
+    ],
+    "investigation_summary": "Cloudflare R2 API operations failed for 59 minutes. A smaller secondary error increase affected Durable Objects in North America.",
+    "symptoms": [
+      "R2 operations failed",
+      "Dependent storage-backed services degraded"
+    ],
+    "technical_root_cause": "Human error and insufficient validation safeguards during abuse remediation disabled the production R2 Gateway responsible for the R2 API.",
+    "customer_impact": "R2 unavailable for 59 minutes; a later reconnect backlog caused a 0.09% increase in errors for North America Durable Objects between 09:13 and 09:36 UTC.",
+    "business_impact": "R2 unavailable for 59 minutes; a later reconnect backlog caused a 0.09% increase in errors for North America Durable Objects between 09:13 and 09:36 UTC.",
+    "recovery_actions": [
+      "Restored the R2 gateway; managed reconnection backlog and isolated secondary metadata impact."
+    ],
+    "preventive_actions": [
+      "Add validation safeguards to abuse-remediation action and improve service protections."
+    ],
+    "sources": [
+      {
+        "url": "https://blog.cloudflare.com/cloudflare-incident-on-february-6-2025/",
+        "source_type": "postmortem",
+        "publication_date": "2025-02-07",
+        "status_url": "https://www.cloudflarestatus.com/",
+        "evidence_notes": "Official report states duration, gateway disabled by remediation action and 0.09% secondary error increase.",
+        "verified_at": "2026-11-13"
+      }
+    ]
+  },
+  {
+    "severity": "high",
+    "severity_basis": "IncidentIQ demo classification based on the documented production availability impact; this is not the company's severity label.",
+    "environment": "production",
+    "reported_errors": [],
+    "documented_metrics": [
+      {
+        "name": "impact_start_to_substantial_reduction",
+        "value": 191,
+        "unit": "minutes",
+        "scope": "Cloudflare/AWS us-east-1 path",
+        "evidence": "Calculated from published 16:27 to 19:38 UTC timestamps."
+      },
+      {
+        "name": "impact_end",
+        "value": 231,
+        "unit": "minutes",
+        "scope": "Cloudflare/AWS us-east-1 path",
+        "evidence": "Calculated from 16:27 to 20:18 UTC timestamps."
+      }
+    ],
+    "infrastructure": [
+      "Cloudflare-AWS network links"
+    ],
+    "dependencies": [
+      "AWS us-east-1"
+    ],
+    "trigger": null,
+    "customers_affected": null,
+    "financial_impact": "Not disclosed in the official incident report.",
+    "sla_impact": "Not disclosed in the official incident report.",
+    "data_gaps": [
+      "Request percentage, customer count and revenue impact not disclosed."
+    ],
+    "verification_status": "verified",
+    "source_publication_date": "2025-08-22",
+    "last_verified_at": "2026-11-13",
+    "id": "cloudflare-2025-08-aws-east",
+    "company": "Cloudflare",
+    "title": "Cloudflare customer origin connectivity disruption",
+    "incident_date": "2025-08-21",
+    "start_time": "16:27 UTC",
+    "end_time": "20:18 UTC",
+    "duration": "3h11m to substantial reduction; 3h51m until intermittent latency ended",
+    "affected_products": [
+      "Cloudflare network",
+      "AWS us-east-1 origins"
+    ],
+    "affected_services": [
+      "Cloudflare-to-AWS us-east-1 connectivity"
+    ],
+    "category": "Network outages",
+    "incident_type": "degradation",
+    "tags": [
+      "Network outages"
+    ],
+    "investigation_summary": "Some Cloudflare customers with origins in AWS us-east-1 experienced latency, packet loss, and origin connection failures.",
+    "symptoms": [
+      "High latency",
+      "Packet loss",
+      "Origin failures"
+    ],
+    "technical_root_cause": "An unusual high-traffic event exposed insufficient network congestion management on links between Cloudflare and AWS us-east-1.",
+    "customer_impact": "Impact began 16:27 UTC, substantially reduced by 19:38, with intermittent latency until 20:18 UTC.",
+    "business_impact": "Impact began 16:27 UTC, substantially reduced by 19:38, with intermittent latency until 20:18 UTC.",
+    "recovery_actions": [
+      "Traffic impact reduced and links returned to service; Cloudflare continued investigation and mitigation."
+    ],
+    "preventive_actions": [
+      "Postmortem documents congestion-management and capacity improvements."
+    ],
+    "sources": [
+      {
+        "url": "https://blog.cloudflare.com/cloudflare-incident-on-august-21-2025",
+        "source_type": "postmortem",
+        "publication_date": "2025-08-22",
+        "status_url": "https://www.cloudflarestatus.com/",
+        "evidence_notes": "Official report states start/reduction/end timestamps and symptoms; root summary attributes it to insufficient congestion management.",
+        "verified_at": "2026-11-13"
+      }
+    ]
+  },
+  {
+    "severity": "high",
+    "severity_basis": "IncidentIQ demo classification based on the documented production availability impact; this is not the company's severity label.",
+    "environment": "production",
+    "reported_errors": [],
+    "documented_metrics": [
+      {
+        "name": "degradation_duration",
+        "value": 24.18,
+        "unit": "hours",
+        "scope": "GitHub services",
+        "evidence": "Official report states 24 hours 11 minutes."
+      },
+      {
+        "name": "queued_webhooks",
+        "value": 5000000,
+        "unit": "events minimum",
+        "scope": "Webhook backlog",
+        "evidence": "Postmortem says over five million hook events."
+      },
+      {
+        "name": "queued_pages_builds",
+        "value": 80000,
+        "unit": "builds",
+        "scope": "GitHub Pages",
+        "evidence": "Postmortem says 80 thousand Pages builds."
+      },
+      {
+        "name": "dropped_webhook_payloads",
+        "value": 200000,
+        "unit": "approximate payloads",
+        "scope": "Expired webhook backlog",
+        "evidence": "Postmortem reports approximately 200,000 expired payloads were dropped."
+      }
+    ],
+    "infrastructure": [
+      "MySQL",
+      "Orchestrator",
+      "Raft",
+      "East/West data centers",
+      "Webhooks queue"
+    ],
+    "dependencies": [
+      "MySQL replication"
+    ],
+    "trigger": null,
+    "customers_affected": null,
+    "financial_impact": "Not disclosed in the official incident report.",
+    "sla_impact": "Not disclosed in the official incident report.",
+    "data_gaps": [
+      "Customer count and request failure percentage not disclosed.",
+      "Manual reconciliation of a small number of writes was ongoing when the report published."
+    ],
+    "verification_status": "verified",
+    "source_publication_date": "2018-10-30",
+    "last_verified_at": "2026-11-13",
+    "id": "github-2018-10-database-failover",
+    "company": "GitHub",
+    "title": "October 21 post-incident analysis",
+    "incident_date": "2018-10-21",
+    "start_time": "2018-10-21 22:52 UTC",
+    "end_time": "2018-10-22 23:03 UTC",
+    "duration": "24 hours 11 minutes",
+    "affected_products": [
+      "GitHub.com",
+      "GitHub Pages",
+      "Webhooks"
+    ],
+    "affected_services": [
+      "GitHub.com metadata services",
+      "Webhooks",
+      "GitHub Pages"
+    ],
+    "category": "Data consistency problems",
+    "incident_type": "degradation",
+    "tags": [
+      "Data consistency problems"
+    ],
+    "investigation_summary": "GitHub services experienced degradation while webhook events and Pages builds accumulated. Some metadata was stale or inconsistent during recovery.",
+    "symptoms": [
+      "Stale or inconsistent website metadata",
+      "Webhooks and Pages builds paused",
+      "Slow cross-country database writes"
+    ],
+    "technical_root_cause": "A 43-second loss of connectivity during optical equipment maintenance triggered Orchestrator failover and divergent cross-site writes; safe failback required reconciliation.",
+    "customer_impact": "Service degradation lasted 24h11. Over five million hook events and 80,000 Pages builds queued; about 200,000 webhook payloads expired and were dropped.",
+    "business_impact": "Service degradation lasted 24h11. Over five million hook events and 80,000 Pages builds queued; about 200,000 webhook payloads expired and were dropped.",
+    "recovery_actions": [
+      "Failed forward, restored database backups, synchronized replicas, returned to the original topology and drained queues; increased webhook TTL after discovering expired payloads."
+    ],
+    "preventive_actions": [
+      "Improve database failover/reconciliation and recovery procedures; preserve data integrity while changing topology."
+    ],
+    "sources": [
+      {
+        "url": "https://github.blog/news-insights/company-news/oct21-post-incident-analysis/",
+        "source_type": "postmortem",
+        "publication_date": "2018-10-30",
+        "status_url": "https://www.githubstatus.com/",
+        "evidence_notes": "Official analysis reports the network partition, database topology, incident duration, queue sizes, expired deliveries and no user data lost.",
+        "verified_at": "2026-11-13"
+      }
+    ]
+  },
+  {
+    "severity": "high",
+    "severity_basis": "IncidentIQ demo classification based on the documented production availability impact; this is not the company's severity label.",
+    "environment": "production",
+    "reported_errors": [],
+    "documented_metrics": [
+      {
+        "name": "duration",
+        "value": 52,
+        "unit": "minutes",
+        "scope": "mysql1 dependent services",
+        "evidence": "Official postmortem reports 52 minutes."
+      }
+    ],
+    "infrastructure": [
+      "MySQL mysql1 master",
+      "ProxySQL"
+    ],
+    "dependencies": [],
+    "trigger": null,
+    "customers_affected": null,
+    "financial_impact": "Not disclosed in the official incident report.",
+    "sla_impact": "Not disclosed in the official incident report.",
+    "data_gaps": [
+      "No per-customer or request-volume measures published."
+    ],
+    "verification_status": "verified",
+    "source_publication_date": "2020-03-26",
+    "last_verified_at": "2026-11-13",
+    "id": "github-2020-02-19-proxysql",
+    "company": "GitHub",
+    "title": "February 19 database resource-contention incident",
+    "incident_date": "2020-02-19",
+    "start_time": "15:17 UTC",
+    "end_time": null,
+    "duration": "52 minutes",
+    "affected_products": [
+      "GitHub.com"
+    ],
+    "affected_services": [
+      "GitHub.com services on mysql1"
+    ],
+    "category": "Database connection exhaustion",
+    "incident_type": "degradation",
+    "tags": [
+      "Database connection exhaustion"
+    ],
+    "investigation_summary": "GitHub database-backed services experienced a 52-minute degradation, including failed queries and delayed database operations.",
+    "symptoms": [
+      "Queries inconsistently failed",
+      "Database operations stalled"
+    ],
+    "technical_root_cause": "A query intended for read replicas was sent to the mysql1 master at high frequency, overloading ProxySQL and exhausting its ability to consistently perform queries.",
+    "customer_impact": "52-minute incident, 15:17 UTC start; exact customer count and failed request percent not disclosed.",
+    "business_impact": "52-minute incident, 15:17 UTC start; exact customer count and failed request percent not disclosed.",
+    "recovery_actions": [
+      "Applied remediation from the prior investigation to restore service."
+    ],
+    "preventive_actions": [
+      "Improve query routing, ProxySQL operational readiness and realistic performance testing."
+    ],
+    "sources": [
+      {
+        "url": "https://github.blog/news-insights/company-news/february-service-disruptions-post-incident-analysis/",
+        "source_type": "postmortem",
+        "publication_date": "2020-03-26",
+        "status_url": "https://www.githubstatus.com/",
+        "evidence_notes": "Official report's Feb 19 timeline identifies query misrouting, ProxySQL failure and 52-minute duration.",
+        "verified_at": "2026-11-13"
+      }
+    ]
+  },
+  {
+    "severity": "high",
+    "severity_basis": "IncidentIQ demo classification based on the documented production availability impact; this is not the company's severity label.",
+    "environment": "production",
+    "reported_errors": [],
+    "documented_metrics": [
+      {
+        "name": "duration",
+        "value": 47,
+        "unit": "minutes",
+        "scope": "mysql1 dependent services",
+        "evidence": "Official postmortem reports 47 minutes."
+      }
+    ],
+    "infrastructure": [
+      "MySQL mysql1",
+      "ProxySQL"
+    ],
+    "dependencies": [],
+    "trigger": null,
+    "customers_affected": null,
+    "financial_impact": "Not disclosed in the official incident report.",
+    "sla_impact": "Not disclosed in the official incident report.",
+    "data_gaps": [
+      "Exact customer count and error percentages not published."
+    ],
+    "verification_status": "verified",
+    "source_publication_date": "2020-03-26",
+    "last_verified_at": "2026-11-13",
+    "id": "github-2020-02-20-proxysql",
+    "company": "GitHub",
+    "title": "February 20 ProxySQL degradation during master promotion",
+    "incident_date": "2020-02-20",
+    "start_time": "21:31 UTC",
+    "end_time": null,
+    "duration": "47 minutes",
+    "affected_products": [
+      "GitHub.com services on mysql1"
+    ],
+    "affected_services": [
+      "GitHub.com services on mysql1"
+    ],
+    "category": "Database failures",
+    "incident_type": "degradation",
+    "tags": [
+      "Database failures"
+    ],
+    "investigation_summary": "GitHub reported a 47-minute service degradation during a planned database master promotion; database-backed service queries were impaired.",
+    "symptoms": [
+      "Service queries degraded during master promotion"
+    ],
+    "technical_root_cause": "Unexpectedly high load during planned promotion of the database master triggered ProxySQL failure.",
+    "customer_impact": "47-minute degradation.",
+    "business_impact": "47-minute degradation.",
+    "recovery_actions": [
+      "Used remediation steps from the previous event; suspended similar maintenance while investigating."
+    ],
+    "preventive_actions": [
+      "Improve ProxySQL operational readiness and test high-load master promotion scenarios."
+    ],
+    "sources": [
+      {
+        "url": "https://github.blog/news-insights/company-news/february-service-disruptions-post-incident-analysis/",
+        "source_type": "postmortem",
+        "publication_date": "2020-03-26",
+        "status_url": "https://www.githubstatus.com/",
+        "evidence_notes": "Official postmortem identifies Feb 20 21:31 UTC event and 47-minute duration.",
+        "verified_at": "2026-11-13"
+      }
+    ]
+  },
+  {
+    "severity": "high",
+    "severity_basis": "IncidentIQ demo classification based on the documented production availability impact; this is not the company's severity label.",
+    "environment": "production",
+    "reported_errors": [],
+    "documented_metrics": [
+      {
+        "name": "duration",
+        "value": 132,
+        "unit": "minutes",
+        "scope": "mysql1 dependent services",
+        "evidence": "Official postmortem reports two hours twelve minutes."
+      },
+      {
+        "name": "configured_limit",
+        "value": 1073741824,
+        "unit": "file descriptors",
+        "scope": "Intended LimitNOFILE",
+        "evidence": "Official report compares intended limit to effective value."
+      },
+      {
+        "name": "effective_limit",
+        "value": 65536,
+        "unit": "file descriptors",
+        "scope": "ProxySQL process limit",
+        "evidence": "Official report states effective LimitNOFILE was 65536."
+      }
+    ],
+    "infrastructure": [
+      "ProxySQL",
+      "Linux file descriptors",
+      "MySQL mysql1"
+    ],
+    "dependencies": [],
+    "trigger": null,
+    "customers_affected": null,
+    "financial_impact": "Not disclosed in the official incident report.",
+    "sla_impact": "Not disclosed in the official incident report.",
+    "data_gaps": [
+      "No customer count or numerical request failure rate disclosed."
+    ],
+    "verification_status": "verified",
+    "source_publication_date": "2020-03-26",
+    "last_verified_at": "2026-11-13",
+    "id": "github-2020-02-25-proxysql",
+    "company": "GitHub",
+    "title": "February 25 ProxySQL file-descriptor-limit incident",
+    "incident_date": "2020-02-25",
+    "start_time": "16:36 UTC",
+    "end_time": null,
+    "duration": "2 hours 12 minutes",
+    "affected_products": [
+      "GitHub.com mysql1 writes"
+    ],
+    "affected_services": [
+      "GitHub.com mysql1 writes"
+    ],
+    "category": "Database connection exhaustion",
+    "incident_type": "degradation",
+    "tags": [
+      "Database connection exhaustion"
+    ],
+    "investigation_summary": "GitHub services experienced stalled writes and database-proxy degradation for 2 hours and 12 minutes.",
+    "symptoms": [
+      "Stalled writes on mysql1",
+      "ProxySQL degraded after remediation"
+    ],
+    "technical_root_cause": "ProxySQL nodes had a lower file-descriptor limit than intended: a process manager silently reduced LimitNOFILE from 1,073,741,824 to 65,536; a race slowed correction.",
+    "customer_impact": "Incident lasted 2h12.",
+    "business_impact": "Incident lasted 2h12.",
+    "recovery_actions": [
+      "Engineers remediated the limit and addressed the process-manager/configuration race."
+    ],
+    "preventive_actions": [
+      "Improve ProxySQL limits, observability and integration testing at realistic scale."
+    ],
+    "sources": [
+      {
+        "url": "https://github.blog/news-insights/company-news/february-service-disruptions-post-incident-analysis/",
+        "source_type": "postmortem",
+        "publication_date": "2020-03-26",
+        "status_url": "https://www.githubstatus.com/",
+        "evidence_notes": "Official timeline names the threshold, limit values and race; duration 2h12.",
+        "verified_at": "2026-11-13"
+      }
+    ]
+  },
+  {
+    "severity": "high",
+    "severity_basis": "IncidentIQ demo classification based on the documented production availability impact; this is not the company's severity label.",
+    "environment": "production",
+    "reported_errors": [],
+    "documented_metrics": [
+      {
+        "name": "duration",
+        "value": 263,
+        "unit": "minutes",
+        "scope": "mysql1 dependent services",
+        "evidence": "Official report states four hours 23 minutes."
+      },
+      {
+        "name": "post-incident_deployment_freeze",
+        "value": 3,
+        "unit": "days",
+        "scope": "GitHub production deployments",
+        "evidence": "Official report says deployments were frozen for three days."
+      }
+    ],
+    "infrastructure": [
+      "MySQL mysql1"
+    ],
+    "dependencies": [],
+    "trigger": null,
+    "customers_affected": null,
+    "financial_impact": "Not disclosed in the official incident report.",
+    "sla_impact": "Not disclosed in the official incident report.",
+    "data_gaps": [
+      "Per-user outage counts and error percentages not published."
+    ],
+    "verification_status": "verified",
+    "source_publication_date": "2020-03-26",
+    "last_verified_at": "2026-11-13",
+    "id": "github-2020-02-27-database-load",
+    "company": "GitHub",
+    "title": "February 27 database load incident",
+    "incident_date": "2020-02-27",
+    "start_time": "14:31 UTC",
+    "end_time": null,
+    "duration": "4 hours 23 minutes",
+    "affected_products": [
+      "GitHub.com services dependent on mysql1"
+    ],
+    "affected_services": [
+      "GitHub.com services dependent on mysql1"
+    ],
+    "category": "Database failures",
+    "incident_type": "degradation",
+    "tags": [
+      "Database failures"
+    ],
+    "investigation_summary": "GitHub services experienced a 4-hour-23-minute degradation associated with database load; production deployments were subsequently frozen for three days.",
+    "symptoms": [
+      "Database load spike",
+      "Service availability degraded"
+    ],
+    "technical_root_cause": "Application query-pattern changes increased master load beyond available headroom.",
+    "customer_impact": "Incident lasted 4h23; GitHub froze production deployments for three days afterward.",
+    "business_impact": "Incident lasted 4h23; GitHub froze production deployments for three days afterward.",
+    "recovery_actions": [
+      "Stabilized traffic and froze production changes for three days."
+    ],
+    "preventive_actions": [
+      "Partitioned key data, reduced master reads, required feature flags for code changes and improved realistic-scale performance tests."
+    ],
+    "sources": [
+      {
+        "url": "https://github.blog/news-insights/company-news/february-service-disruptions-post-incident-analysis/",
+        "source_type": "postmortem",
+        "publication_date": "2020-03-26",
+        "status_url": "https://www.githubstatus.com/",
+        "evidence_notes": "Official postmortem names query-pattern change, 4h23 duration and three-day production deployment freeze.",
+        "verified_at": "2026-11-13"
+      }
+    ]
+  },
+  {
+    "severity": "high",
+    "severity_basis": "IncidentIQ demo classification based on the documented production availability impact; this is not the company's severity label.",
+    "environment": "production",
+    "reported_errors": [],
+    "documented_metrics": [
+      {
+        "name": "main_services_degraded",
+        "value": 8,
+        "unit": "of 10 services",
+        "scope": "GitHub status portal",
+        "evidence": "Official report says 8 of 10 services degraded."
+      }
+    ],
+    "infrastructure": [
+      "Git database service",
+      "Database failover",
+      "Configuration rollout"
+    ],
+    "dependencies": [],
+    "trigger": null,
+    "customers_affected": null,
+    "financial_impact": "Not disclosed in the official incident report.",
+    "sla_impact": "Not disclosed in the official incident report.",
+    "data_gaps": [
+      "Exact error percentage, affected users and financial impact not disclosed."
+    ],
+    "verification_status": "verified",
+    "source_publication_date": "2023-05-15",
+    "last_verified_at": "2026-11-13",
+    "id": "github-2023-05-git-db",
+    "company": "GitHub",
+    "title": "May 9 Git database degradation after configuration change",
+    "incident_date": "2023-05-09",
+    "start_time": null,
+    "end_time": null,
+    "duration": "Just over one hour of primary downtime; some data recovery continued afterward",
+    "affected_products": [
+      "GitHub Git databases",
+      "Git operations",
+      "Pull requests",
+      "Actions"
+    ],
+    "affected_services": [
+      "GitHub Git databases",
+      "Git operations",
+      "Pull requests",
+      "Actions"
+    ],
+    "category": "Configuration errors",
+    "incident_type": "degradation",
+    "tags": [
+      "Configuration errors"
+    ],
+    "investigation_summary": "Eight of ten main GitHub services were impacted. Reads and writes of Git data failed or were delayed, and some data recovery continued after the main outage.",
+    "symptoms": [
+      "8 of 10 main services degraded",
+      "Git reads/writes failed or were delayed",
+      "Some pull request and push data had extended recovery"
+    ],
+    "technical_root_cause": "A configuration change intended to prevent connection saturation triggered a database failover; the rollback then failed due to internal infrastructure error.",
+    "customer_impact": "Most downtime lasted just over an hour; eight of ten status-portal services were impacted.",
+    "business_impact": "Most downtime lasted just over an hour; eight of ten status-portal services were impacted.",
+    "recovery_actions": [
+      "Reverted the configuration where possible and restored Git database service; some data recovery continued afterward."
+    ],
+    "preventive_actions": [
+      "Safer deployment process, better low-volume/high-cost query observability, and database failover fixes."
+    ],
+    "sources": [
+      {
+        "url": "https://github.blog/news-insights/company-news/addressing-githubs-recent-availability-issues/",
+        "source_type": "postmortem",
+        "publication_date": "2023-05-15",
+        "status_url": "https://www.githubstatus.com/",
+        "evidence_notes": "Official GitHub analysis calls out May 9, 8/10 services, configuration trigger and rollback failure.",
+        "verified_at": "2026-11-13"
+      }
+    ]
+  },
+  {
+    "severity": "high",
+    "severity_basis": "IncidentIQ demo classification based on the documented production availability impact; this is not the company's severity label.",
+    "environment": "production",
+    "reported_errors": [
+      "DEADLINE_EXCEEDED"
+    ],
+    "documented_metrics": [
+      {
+        "name": "publish_error_rate",
+        "value": 1.2,
+        "unit": "percent",
+        "scope": "Cloud Pub/Sub publish",
+        "evidence": "Official incident report."
+      },
+      {
+        "name": "publish_p99_latency_increase",
+        "value": 8.3,
+        "unit": "seconds",
+        "scope": "Cloud Pub/Sub publish",
+        "evidence": "Official incident report."
+      },
+      {
+        "name": "publish_admin_error_rate",
+        "value": 8.3,
+        "unit": "percent",
+        "scope": "Pub/Sub publish admin operations",
+        "evidence": "Official incident report."
+      },
+      {
+        "name": "subscribe_admin_error_rate",
+        "value": 3.2,
+        "unit": "percent",
+        "scope": "Pub/Sub subscribe admin operations",
+        "evidence": "Official incident report."
+      }
+    ],
+    "infrastructure": [
+      "Pub/Sub metadata storage"
+    ],
+    "dependencies": [],
+    "trigger": null,
+    "customers_affected": null,
+    "financial_impact": "Not disclosed in the official incident report.",
+    "sla_impact": "Not disclosed in the official incident report.",
+    "data_gaps": [
+      "Affected customer count and revenue impact not disclosed."
+    ],
+    "verification_status": "verified",
+    "source_publication_date": "2019-05-28",
+    "last_verified_at": "2026-11-13",
+    "id": "google-2019-05-pubsub",
+    "company": "Google Cloud",
+    "title": "Cloud Pub/Sub metadata hotspot incident",
+    "incident_date": "2019-05-20",
+    "start_time": "2019-05-20 20:54 PDT",
+    "end_time": "2019-05-21 00:24 PDT",
+    "duration": "3 hours 30 minutes",
+    "affected_products": [
+      "Cloud Pub/Sub",
+      "Cloud SQL",
+      "Cloud Filestore",
+      "App Engine Task Queues"
+    ],
+    "affected_services": [
+      "Cloud Pub/Sub",
+      "Cloud SQL",
+      "Cloud Filestore",
+      "App Engine Task Queues"
+    ],
+    "category": "Message queue failures",
+    "incident_type": "degradation",
+    "tags": [
+      "Message queue failures"
+    ],
+    "investigation_summary": "Google Cloud Pub/Sub publish, pull, and administrative operations saw elevated errors and latency. Google documented downstream impact to dependent products.",
+    "symptoms": [
+      "Publish error rate 1.2%",
+      "p99 publish latency increased 8.3 seconds",
+      "DEADLINE_EXCEEDED errors"
+    ],
+    "technical_root_cause": "A surge of publish requests did not cache as expected, hot-spotted metadata storage, and activated overload protection which rejected/delayed requests.",
+    "customer_impact": "Incident lasted 3h30; publish/admin errors and downstream timeouts were reported.",
+    "business_impact": "Incident lasted 3h30; publish/admin errors and downstream timeouts were reported.",
+    "recovery_actions": [
+      "Rate-limited source traffic; disabled nonessential internal traffic; service auto-healed after request surge subsided."
+    ],
+    "preventive_actions": [
+      "Add metadata caching, increase storage-server count, improve schema/load distribution and rate-limit/load-shed/hotspot playbooks."
+    ],
+    "sources": [
+      {
+        "url": "https://status.cloud.google.com/incident/cloud-pubsub/19001",
+        "source_type": "postmortem",
+        "publication_date": "2019-05-28",
+        "status_url": "https://status.cloud.google.com/",
+        "evidence_notes": "Official status postmortem contains impact percentages, latency, error example, root cause and recovery.",
+        "verified_at": "2026-11-13"
+      }
+    ]
+  },
+  {
+    "severity": "critical",
+    "severity_basis": "IncidentIQ demo classification based on the documented production availability impact; this is not the company's severity label.",
+    "environment": "production",
+    "reported_errors": [],
+    "documented_metrics": [
+      {
+        "name": "pubsub_successful_requests_global_drop",
+        "value": 27,
+        "unit": "percent",
+        "scope": "Global Pub/Sub publish/subscribe during incident",
+        "evidence": "Official incident report."
+      },
+      {
+        "name": "app_engine_us_central_rps_drop",
+        "value": 23.2,
+        "unit": "percent",
+        "scope": "App Engine us-central1",
+        "evidence": "Official incident report."
+      },
+      {
+        "name": "endpoints_peak_error_rate",
+        "value": 4.4,
+        "unit": "percent",
+        "scope": "Cloud Endpoints at onset",
+        "evidence": "Official incident report."
+      },
+      {
+        "name": "cloud_storage_us_west2_error_rate",
+        "value": 96.2,
+        "unit": "percent",
+        "scope": "Cloud Storage bucket requests, us-west2 average",
+        "evidence": "Official incident report."
+      }
+    ],
+    "infrastructure": [
+      "Network control plane",
+      "BGP",
+      "Cluster management automation"
+    ],
+    "dependencies": [],
+    "trigger": null,
+    "customers_affected": null,
+    "financial_impact": "Not disclosed in the official incident report.",
+    "sla_impact": "Not disclosed in the official incident report.",
+    "data_gaps": [],
+    "verification_status": "verified",
+    "source_publication_date": "2019-06-06",
+    "last_verified_at": "2026-11-13",
+    "id": "google-2019-06-network",
+    "company": "Google Cloud",
+    "title": "Google Cloud Networking incident #19009",
+    "incident_date": "2019-06-02",
+    "start_time": "11:45 PDT",
+    "end_time": "16:10 PDT full recovery",
+    "duration": "3h19–4h25 depending on region",
+    "affected_products": [
+      "Google Cloud Platform",
+      "G Suite",
+      "YouTube"
+    ],
+    "affected_services": [
+      "Compute Engine",
+      "App Engine",
+      "Cloud Endpoints",
+      "Cloud Interconnect",
+      "Cloud VPN",
+      "Cloud Pub/Sub",
+      "BigQuery",
+      "Cloud Storage"
+    ],
+    "category": "Network outages",
+    "incident_type": "outage",
+    "tags": [
+      "Network outages"
+    ],
+    "investigation_summary": "Google Cloud and dependent products experienced elevated latency, errors, timeouts, and regional connectivity loss; some requests returned HTTP 500.",
+    "symptoms": [
+      "Elevated latency",
+      "Intermittent errors/timeouts",
+      "Regional connectivity loss",
+      "Some requests returned HTTP 500"
+    ],
+    "technical_root_cause": "Maintenance automation descheduled network-control-plane jobs across physical locations due to two configuration conditions and a cluster-management software bug; BGP routes were withdrawn after fail-static operation expired.",
+    "customer_impact": "Region-dependent duration 3h19–4h25; App Engine unavailable in four regions; Pub/Sub saw a 27% global drop in successful publish/subscribe requests.",
+    "business_impact": "Region-dependent duration 3h19–4h25; App Engine unavailable in four regions; Pub/Sub saw a 27% global drop in successful publish/subscribe requests.",
+    "recovery_actions": [
+      "Halted automation, rebuilt/restarted control plane and configuration, and shifted service traffic away from affected regions."
+    ],
+    "preventive_actions": [
+      "Harden maintenance automation and cluster-management safeguards; persist control-plane configuration; longer fail-static mode; expanded disaster-recovery testing."
+    ],
+    "sources": [
+      {
+        "url": "https://status.cloud.google.com/incident/cloud-networking/19009",
+        "source_type": "postmortem",
+        "publication_date": "2019-06-06",
+        "status_url": "https://status.cloud.google.com/",
+        "evidence_notes": "Official report covers multi-region impact, root-cause chain, metrics, recovery and preventive actions.",
+        "verified_at": "2026-11-13"
+      }
+    ]
+  },
+  {
+    "severity": "critical",
+    "severity_basis": "IncidentIQ demo classification based on the documented production availability impact; this is not the company's severity label.",
+    "environment": "production",
+    "reported_errors": [],
+    "documented_metrics": [
+      {
+        "name": "gce_instances_packet_loss_affected",
+        "value": 20,
+        "unit": "percent of instances",
+        "scope": "us-west1-b",
+        "evidence": "Official incident report."
+      },
+      {
+        "name": "affected_instances_packet_loss",
+        "value": 100,
+        "unit": "percent",
+        "scope": "Affected instances",
+        "evidence": "Official incident report."
+      },
+      {
+        "name": "cloud_router_affected",
+        "value": 20,
+        "unit": "percent",
+        "scope": "us-west1 region",
+        "evidence": "Official incident report."
+      },
+      {
+        "name": "cloud_vpn_affected",
+        "value": 6,
+        "unit": "percent",
+        "scope": "us-west1 region",
+        "evidence": "Official incident report."
+      }
+    ],
+    "infrastructure": [
+      "Chubby",
+      "Network control plane",
+      "Virtualized network"
+    ],
+    "dependencies": [],
+    "trigger": null,
+    "customers_affected": null,
+    "financial_impact": "Not disclosed in the official incident report.",
+    "sla_impact": "Not disclosed in the official incident report.",
+    "data_gaps": [],
+    "verification_status": "verified",
+    "source_publication_date": "2019-10-30",
+    "last_verified_at": "2026-11-13",
+    "id": "google-2019-10-network",
+    "company": "Google Cloud",
+    "title": "Google Cloud Networking incident #19020",
+    "incident_date": "2019-10-22",
+    "start_time": "16:20 PDT",
+    "end_time": "18:51 PDT",
+    "duration": "2 hours 31 minutes",
+    "affected_products": [
+      "Compute Engine",
+      "Cloud Router",
+      "Cloud VPN",
+      "Memorystore",
+      "Kubernetes Engine",
+      "Cloud SQL",
+      "Bigtable"
+    ],
+    "affected_services": [
+      "Compute Engine",
+      "Cloud Router",
+      "Cloud VPN",
+      "Memorystore",
+      "Kubernetes Engine",
+      "Cloud SQL",
+      "Bigtable"
+    ],
+    "category": "Network outages",
+    "incident_type": "outage",
+    "tags": [
+      "Network outages"
+    ],
+    "investigation_summary": "Some Google Cloud resources in the affected zone experienced packet loss and failed creation operations; Cloud Router, VPN, and Memorystore customers also reported impact.",
+    "symptoms": [
+      "100% packet loss to/from about 20% of instances in us-west1-b",
+      "New instance creation failed",
+      "Cloud VPN/Router and Memorystore degraded"
+    ],
+    "technical_root_cause": "Chubby leader-election churn stopped network programming; a race in leadership-change handling distributed invalid configurations to existing instances.",
+    "customer_impact": "Network programming impact 2h31; 20% of Cloud Routers and 6% of VPN gateways experienced packet loss.",
+    "business_impact": "Network programming impact 2h31; 20% of Cloud Routers and 6% of VPN gateways experienced packet loss.",
+    "recovery_actions": [
+      "Rate-limited, forced leader elections and redirected traffic until control plane recovered."
+    ],
+    "preventive_actions": [
+      "Fix election race, reject invalid configurations and improve failure-specific response tooling."
+    ],
+    "sources": [
+      {
+        "url": "https://status.cloud.google.com/incident/cloud-networking/19020",
+        "source_type": "postmortem",
+        "publication_date": "2019-10-30",
+        "status_url": "https://status.cloud.google.com/",
+        "evidence_notes": "Official status report details packet loss, affected fractions, root cause and mitigations.",
+        "verified_at": "2026-11-13"
+      }
+    ]
+  },
+  {
+    "severity": "critical",
+    "severity_basis": "IncidentIQ demo classification based on the documented production availability impact; this is not the company's severity label.",
+    "environment": "production",
+    "reported_errors": [],
+    "documented_metrics": [
+      {
+        "name": "cloud_iam_us_east1_errors",
+        "value": 94.5,
+        "unit": "percent average",
+        "scope": "Cloud IAM during incident",
+        "evidence": "Official status report."
+      },
+      {
+        "name": "gcs_us_east1_errors",
+        "value": 99,
+        "unit": "percent average",
+        "scope": "Cloud Storage buckets during incident",
+        "evidence": "Official status report."
+      },
+      {
+        "name": "compute_engine_api_errors",
+        "value": 16,
+        "unit": "percent",
+        "scope": "GCE API requests",
+        "evidence": "Official status report."
+      },
+      {
+        "name": "pubsub_publish_errors",
+        "value": 15,
+        "unit": "percent average",
+        "scope": "Cloud Pub/Sub publish operations",
+        "evidence": "Official status report."
+      }
+    ],
+    "infrastructure": [
+      "Google internal KMS",
+      "Cryptographic key dependencies"
+    ],
+    "dependencies": [],
+    "trigger": null,
+    "customers_affected": null,
+    "financial_impact": "Not disclosed in the official incident report.",
+    "sla_impact": "Not disclosed in the official incident report.",
+    "data_gaps": [],
+    "verification_status": "verified",
+    "source_publication_date": null,
+    "last_verified_at": "2026-11-13",
+    "id": "google-2019-11-kms",
+    "company": "Google Cloud",
+    "title": "Google Cloud regional service disruption involving Cloud KMS",
+    "incident_date": "2019-11-11",
+    "start_time": "02:39 PST",
+    "end_time": "03:27 PST core KMS impact",
+    "duration": "48 minutes core impact; some service tails longer",
+    "affected_products": [
+      "Cloud IAM",
+      "Pub/Sub",
+      "Compute Engine",
+      "App Engine",
+      "Cloud Functions",
+      "Cloud Storage",
+      "Cloud Console"
+    ],
+    "affected_services": [
+      "Cloud IAM",
+      "Pub/Sub",
+      "Compute Engine",
+      "App Engine",
+      "Cloud Functions",
+      "Cloud Storage",
+      "Cloud Console"
+    ],
+    "category": "Cloud infrastructure failures",
+    "incident_type": "degradation",
+    "tags": [
+      "Cloud infrastructure failures"
+    ],
+    "investigation_summary": "Google Cloud customers saw high API error rates and failed control-plane operations across products in several regions.",
+    "symptoms": [
+      "High API error rates",
+      "Control-plane operations failed",
+      "HTTP errors on storage and cloud services"
+    ],
+    "technical_root_cause": "A new KMS binary introduced a feature incompatible with older related components; KMS is a common dependency for cryptographic operations.",
+    "customer_impact": "Core KMS impact 02:39–03:27 PST; some service impact lasted longer; Cloud IAM error rates reached 94.5% in us-east1 and GCS averaged 99% errors there.",
+    "business_impact": "Core KMS impact 02:39–03:27 PST; some service impact lasted longer; Cloud IAM error rates reached 94.5% in us-east1 and GCS averaged 99% errors there.",
+    "recovery_actions": [
+      "Stopped/adjusted rollout and recovered KMS and affected dependent services."
+    ],
+    "preventive_actions": [
+      "Improve compatibility and rollout safeguards for shared KMS components; see follow-up section in status report."
+    ],
+    "sources": [
+      {
+        "url": "https://status.cloud.google.com/incident/cloud-datastore/19006",
+        "source_type": "postmortem",
+        "publication_date": null,
+        "status_url": "https://status.cloud.google.com/",
+        "evidence_notes": "Official report identifies new-version incompatibility and detailed product error rates.",
+        "verified_at": "2026-11-13"
+      }
+    ]
+  },
+  {
+    "severity": "critical",
+    "severity_basis": "IncidentIQ demo classification based on the documented production availability impact; this is not the company's severity label.",
+    "environment": "production",
+    "reported_errors": [],
+    "documented_metrics": [
+      {
+        "name": "us_east1_c_instances_unavailable",
+        "value": 22.5,
+        "unit": "percent",
+        "scope": "Compute Engine us-east1-c for 90 minutes",
+        "evidence": "Official report."
+      },
+      {
+        "name": "persistent_disk_devices_affected",
+        "value": 0.0267,
+        "unit": "percent",
+        "scope": "PD devices us-east1-c",
+        "evidence": "Official report; some unavailable up to 28h."
+      },
+      {
+        "name": "regional_packet_loss",
+        "value": 5,
+        "unit": "percent",
+        "scope": "Public IP and Network Load Balancer traffic",
+        "evidence": "Official report; 07:55–08:05 PDT."
+      }
+    ],
+    "infrastructure": [
+      "Data-center generators",
+      "Fuel delivery system",
+      "Utility substation"
+    ],
+    "dependencies": [],
+    "trigger": null,
+    "customers_affected": null,
+    "financial_impact": "Not disclosed in the official incident report.",
+    "sla_impact": "Not disclosed in the official incident report.",
+    "data_gaps": [],
+    "verification_status": "verified",
+    "source_publication_date": null,
+    "last_verified_at": "2026-11-13",
+    "id": "google-2020-06-power",
+    "company": "Google Cloud",
+    "title": "Us-east1 data-center fuel delivery failure",
+    "incident_date": "2020-06-29",
+    "start_time": "07:47 PDT impact",
+    "end_time": "13:06 PDT report end",
+    "duration": "1h30 for major GCE impact; some disks up to 28h",
+    "affected_products": [
+      "Compute Engine",
+      "Persistent Disk",
+      "Cloud VPN",
+      "Network Load Balancing"
+    ],
+    "affected_services": [
+      "Compute Engine",
+      "Persistent Disk",
+      "Cloud VPN",
+      "Network Load Balancing"
+    ],
+    "category": "Cloud infrastructure failures",
+    "incident_type": "outage",
+    "tags": [
+      "Cloud infrastructure failures"
+    ],
+    "investigation_summary": "In us-east1-c, some Compute Engine instances and Persistent Disk devices became unavailable; Google also documented regional packet loss.",
+    "symptoms": [
+      "22.5% of us-east1-c instances unavailable for 90 minutes",
+      "5% regional packet loss for ten minutes",
+      "Some disks unavailable up to 28 hours"
+    ],
+    "technical_root_cause": "During scheduled utility substation maintenance, generator fuel delivery system failures caused generators to run out of fuel despite fuel being present in storage tanks.",
+    "customer_impact": "22.5% of us-east1-c VMs unavailable for 1h30; 0.0267% of PD devices unavailable up to 28h.",
+    "business_impact": "22.5% of us-east1-c VMs unavailable for 1h30; 0.0267% of PD devices unavailable up to 28h.",
+    "recovery_actions": [
+      "Datacenter operators mitigated fuel-supply problem, utility power returned and cluster recovery completed."
+    ],
+    "preventive_actions": [
+      "Improve generator fuel safeguards/maintenance and monitoring; see official incident prevention details."
+    ],
+    "sources": [
+      {
+        "url": "https://status.cloud.google.com/incidents/Wb97fPsnE5VdLaKDcAeP",
+        "source_type": "postmortem",
+        "publication_date": null,
+        "status_url": "https://status.cloud.google.com/",
+        "evidence_notes": "Official incident report provides root cause and affected instance/disk/packet-loss shares.",
+        "verified_at": "2026-11-13"
+      }
+    ]
+  },
+  {
+    "severity": "high",
+    "severity_basis": "IncidentIQ demo classification based on the documented production availability impact; this is not the company's severity label.",
+    "environment": "production",
+    "reported_errors": [],
+    "documented_metrics": [
+      {
+        "name": "network_disruption",
+        "value": 84,
+        "unit": "minutes",
+        "scope": "europe-west2-a",
+        "evidence": "Official incident report."
+      },
+      {
+        "name": "memorystore_redis_instances_unhealthy",
+        "value": 1.5,
+        "unit": "percent",
+        "scope": "europe-west2; lasted 2h24",
+        "evidence": "Official incident report."
+      },
+      {
+        "name": "classic_vpn_tunnels_unavailable",
+        "value": 4.5,
+        "unit": "percent",
+        "scope": "europe-west2; lasted 8h10",
+        "evidence": "Official incident report."
+      }
+    ],
+    "infrastructure": [
+      "Software-defined networking control plane"
+    ],
+    "dependencies": [
+      "Network control plane"
+    ],
+    "trigger": "A configuration change to network-control-plane ACLs, combined with environment drift between production and staging/canary.",
+    "customers_affected": null,
+    "financial_impact": "Not disclosed in the official incident report.",
+    "sla_impact": "Not disclosed in the official incident report.",
+    "data_gaps": [
+      "Details of customer/revenue/SLA impact not disclosed."
+    ],
+    "verification_status": "verified",
+    "source_publication_date": null,
+    "last_verified_at": "2026-11-13",
+    "id": "google-2020-12-network",
+    "company": "Google Cloud",
+    "title": "Networking disruption in europe-west2-a",
+    "incident_date": "2020-12-09",
+    "start_time": null,
+    "end_time": null,
+    "duration": "1h24 network; longer dependency recovery",
+    "affected_products": [
+      "Google Cloud Networking",
+      "Memorystore",
+      "Cloud VPN",
+      "App Engine Flex"
+    ],
+    "affected_services": [
+      "Google Cloud Networking",
+      "Memorystore",
+      "Cloud VPN",
+      "App Engine Flex"
+    ],
+    "category": "Network outages",
+    "incident_type": "outage",
+    "tags": [
+      "Network outages"
+    ],
+    "investigation_summary": "Some resources in europe-west2-a were unreachable. Memorystore Redis, Cloud VPN, and App Engine Flex had separately reported recovery windows.",
+    "symptoms": [
+      "Some resources unreachable",
+      "1.5% Memorystore Redis instances unhealthy",
+      "4.5% Classic VPN tunnels unavailable"
+    ],
+    "technical_root_cause": "A network-control-plane ACL change removed permissions required by leader-election tasks to read configuration from the lock service. Production ACL state differed from staging/canary; when leader election failed, BGP routes were withdrawn and europe-west2-a became isolated.",
+    "customer_impact": "Network disruption 1h24; Redis impact 2h24; some VPN tunnels remained down 8h10; App Engine Flex deployment errors 1h45.",
+    "business_impact": "Network disruption 1h24; Redis impact 2h24; some VPN tunnels remained down 8h10; App Engine Flex deployment errors 1h45.",
+    "recovery_actions": [
+      "Google restored networking and then recovered affected dependent services."
+    ],
+    "preventive_actions": [
+      "Status report describes network control-plane resiliency work."
+    ],
+    "sources": [
+      {
+        "url": "https://status.cloud.google.com/incidents/qRpmq9arsrCV7xWdfftF",
+        "source_type": "postmortem",
+        "publication_date": null,
+        "status_url": "https://status.cloud.google.com/",
+        "evidence_notes": "Official status report states network duration and measured Redis/VPN impact.",
+        "verified_at": "2026-11-13"
+      }
+    ]
+  },
+  {
+    "severity": "critical",
+    "severity_basis": "IncidentIQ demo classification based on the documented production availability impact; this is not the company's severity label.",
+    "environment": "production",
+    "reported_errors": [],
+    "documented_metrics": [
+      {
+        "name": "affected_az_ebs_volumes_stuck",
+        "value": 13,
+        "unit": "percent",
+        "scope": "Peak affected AZ",
+        "evidence": "Official AWS postmortem."
+      },
+      {
+        "name": "unrestorable_volumes",
+        "value": 0.07,
+        "unit": "percent",
+        "scope": "Volumes in affected AZ",
+        "evidence": "Official AWS postmortem."
+      },
+      {
+        "name": "single_az_rds_stuck_io_peak",
+        "value": 45,
+        "unit": "percent",
+        "scope": "RDS single-AZ instances in affected zone",
+        "evidence": "Official AWS postmortem."
+      }
+    ],
+    "infrastructure": [
+      "EBS primary/redundant networks",
+      "EBS cluster/control plane"
+    ],
+    "dependencies": [],
+    "trigger": null,
+    "customers_affected": null,
+    "financial_impact": "AWS offered a 10-day 100% usage credit on affected-zone EBS, EC2 and RDS for eligible customers; total revenue impact not disclosed.",
+    "sla_impact": "AWS offered eligible customers automatic 10-day service credit for affected-zone EBS/EC2/RDS usage.",
+    "data_gaps": [],
+    "verification_status": "verified",
+    "source_publication_date": "2011-04-29",
+    "last_verified_at": "2026-11-13",
+    "id": "aws-2011-04-ebs",
+    "company": "AWS",
+    "title": "US East EBS and EC2 disruption",
+    "incident_date": "2011-04-21",
+    "start_time": "2011-04-21 12:47 AM PDT",
+    "end_time": null,
+    "duration": "Several days for residual volume restoration",
+    "affected_products": [
+      "EC2",
+      "EBS",
+      "RDS"
+    ],
+    "affected_services": [
+      "Amazon EBS",
+      "Amazon EC2",
+      "Amazon RDS"
+    ],
+    "category": "Storage failures",
+    "incident_type": "outage",
+    "tags": [
+      "Storage failures"
+    ],
+    "investigation_summary": "Some EBS reads and writes stalled, EC2 instances using affected volumes became impaired, and EBS API latency and errors increased in US East.",
+    "symptoms": [
+      "EBS reads/writes stuck",
+      "EC2 instances using affected volumes stalled",
+      "EBS API latency/errors across region"
+    ],
+    "technical_root_cause": "Traffic was shifted from primary to a lower-capacity redundant network; node isolation triggered a re-mirroring storm, cluster-capacity exhaustion and EBS control-plane thread starvation.",
+    "customer_impact": "About 13% of affected-AZ volumes stuck at peak; 0.07% could not be restored consistently; up to 45% of single-AZ RDS instances in affected AZ had stuck I/O; 10-day service credit offered to qualifying customers.",
+    "business_impact": "About 13% of affected-AZ volumes stuck at peak; 0.07% could not be restored consistently; up to 45% of single-AZ RDS instances in affected AZ had stuck I/O; 10-day service credit offered to qualifying customers.",
+    "recovery_actions": [
+      "Disabled/isolated degraded cluster control APIs, throttled/remediated replication storm, snapshotted recoverable volumes and restored most data; manually handled remaining volumes."
+    ],
+    "preventive_actions": [
+      "Improve network change safety, backoff and capacity protection, control-plane isolation, recovery tooling and multi-AZ guidance."
+    ],
+    "sources": [
+      {
+        "url": "https://aws.amazon.com/message/65648/",
+        "source_type": "postmortem",
+        "publication_date": "2011-04-29",
+        "status_url": "https://health.aws.amazon.com/health/status",
+        "evidence_notes": "AWS postmortem documents root-cause chain, 13% stuck volume, 0.07% unrestorable and RDS impact; it states 10-day credit.",
+        "verified_at": "2026-11-13"
+      }
+    ]
+  },
+  {
+    "severity": "high",
+    "severity_basis": "IncidentIQ demo classification based on the documented production availability impact; this is not the company's severity label.",
+    "environment": "production",
+    "reported_errors": [],
+    "documented_metrics": [
+      {
+        "name": "s3_recovery_duration",
+        "value": 257,
+        "unit": "minutes",
+        "scope": "S3 US-EAST-1",
+        "evidence": "Calculated from AWS published start and recovery times."
+      }
+    ],
+    "infrastructure": [
+      "S3 index subsystem",
+      "S3 placement subsystem"
+    ],
+    "dependencies": [],
+    "trigger": null,
+    "customers_affected": null,
+    "financial_impact": "Not disclosed in the official incident report.",
+    "sla_impact": "Not disclosed in the official incident report.",
+    "data_gaps": [
+      "Customer count, request failure percentages and revenue impact not disclosed."
+    ],
+    "verification_status": "verified",
+    "source_publication_date": null,
+    "last_verified_at": "2026-11-13",
+    "id": "aws-2017-02-s3",
+    "company": "AWS",
+    "title": "S3 service disruption in US-EAST-1",
+    "incident_date": "2017-02-28",
+    "start_time": "09:37 PST",
+    "end_time": "13:54 PST",
+    "duration": "4 hours 17 minutes for S3 normal operations",
+    "affected_products": [
+      "Amazon S3",
+      "EC2",
+      "EBS",
+      "Lambda"
+    ],
+    "affected_services": [
+      "Amazon S3",
+      "EC2",
+      "EBS",
+      "Lambda"
+    ],
+    "category": "Storage failures",
+    "incident_type": "outage",
+    "tags": [
+      "Storage failures"
+    ],
+    "investigation_summary": "Amazon S3 API requests failed in US-EAST-1; dependent AWS workflows also experienced delays or backlogs while recovering.",
+    "symptoms": [
+      "GET/LIST/PUT/DELETE requests unavailable in stages",
+      "S3 console and some dependent workflows impaired"
+    ],
+    "technical_root_cause": "An incorrect input to an operational command removed a larger set of servers than intended, removing capacity from S3 index and placement subsystems.",
+    "customer_impact": "S3 normal at 13:54 PST from 09:37 PST start (4h17); downstream service backlogs recovered separately.",
+    "business_impact": "S3 normal at 13:54 PST from 09:37 PST start (4h17); downstream service backlogs recovered separately.",
+    "recovery_actions": [
+      "Restarted and safety-checked index and placement systems; recovered GET/LIST/DELETE before PUT; dependent services drained backlogs."
+    ],
+    "preventive_actions": [
+      "Rate-limit capacity removal; enforce minimum-capacity guardrails; partition services into cells; run status admin console across regions."
+    ],
+    "sources": [
+      {
+        "url": "https://aws.amazon.com/message/41926/",
+        "source_type": "postmortem",
+        "publication_date": null,
+        "status_url": "https://health.aws.amazon.com/health/status",
+        "evidence_notes": "AWS report gives command error, affected subsystems, recovery timestamps, dependencies and preventive actions.",
+        "verified_at": "2026-11-13"
+      }
+    ]
+  },
+  {
+    "severity": "high",
+    "severity_basis": "IncidentIQ demo classification based on the documented production availability impact; this is not the company's severity label.",
+    "environment": "production",
+    "reported_errors": [],
+    "documented_metrics": [
+      {
+        "name": "duration",
+        "value": 84,
+        "unit": "minutes",
+        "scope": "EC2 DNS in Seoul",
+        "evidence": "Official report gives 08:19–09:43 KST."
+      }
+    ],
+    "infrastructure": [
+      "EC2 DNS resolver fleet"
+    ],
+    "dependencies": [],
+    "trigger": null,
+    "customers_affected": null,
+    "financial_impact": "Not disclosed in the official incident report.",
+    "sla_impact": "Not disclosed in the official incident report.",
+    "data_gaps": [
+      "Customer count/error rate not disclosed."
+    ],
+    "verification_status": "verified",
+    "source_publication_date": "2018-11-27",
+    "last_verified_at": "2026-11-13",
+    "id": "aws-2018-11-seoul-dns",
+    "company": "AWS",
+    "title": "EC2 DNS resolution issue in Seoul region",
+    "incident_date": "2018-11-22",
+    "start_time": "08:19 KST",
+    "end_time": "09:43 KST",
+    "duration": "1 hour 24 minutes",
+    "affected_products": [
+      "Amazon EC2 DNS resolver"
+    ],
+    "affected_services": [
+      "Amazon EC2 DNS resolver"
+    ],
+    "category": "DNS failures",
+    "incident_type": "degradation",
+    "tags": [
+      "DNS failures"
+    ],
+    "investigation_summary": "EC2 instances in the Seoul region experienced DNS lookup failures from within the instances; customers retained other network connectivity.",
+    "symptoms": [
+      "DNS queries from within EC2 instances failed"
+    ],
+    "technical_root_cause": "A configuration update removed the resolver fleet's minimum healthy-host setting; a low default led to too few healthy hosts remaining in service.",
+    "customer_impact": "DNS impact 08:19–09:43 KST (84 minutes); exact customer count not disclosed.",
+    "business_impact": "DNS impact 08:19–09:43 KST (84 minutes); exact customer count not disclosed.",
+    "recovery_actions": [
+      "Prevented further host removal and restored resolver fleet capacity."
+    ],
+    "preventive_actions": [
+      "Validate minimum capacity in config updates and throttle hourly removal of healthy capacity."
+    ],
+    "sources": [
+      {
+        "url": "https://aws.amazon.com/message/74876-2/",
+        "source_type": "postmortem",
+        "publication_date": "2018-11-27",
+        "status_url": "https://health.aws.amazon.com/health/status",
+        "evidence_notes": "Official AWS report states timing, configuration omission, recovery and semantic validation measures.",
+        "verified_at": "2026-11-13"
+      }
+    ]
+  },
+  {
+    "severity": "high",
+    "severity_basis": "IncidentIQ demo classification based on the documented production availability impact; this is not the company's severity label.",
+    "environment": "production",
+    "reported_errors": [],
+    "documented_metrics": [
+      {
+        "name": "cooling_restored_minutes",
+        "value": 165,
+        "unit": "minutes after event start",
+        "scope": "Affected Tokyo AZ",
+        "evidence": "Calculated from 12:36 to 15:21 JST."
+      },
+      {
+        "name": "majority_resource_recovery_minutes",
+        "value": 354,
+        "unit": "minutes after event start",
+        "scope": "Affected Tokyo AZ",
+        "evidence": "Calculated from 12:36 to 18:30 JST."
+      }
+    ],
+    "infrastructure": [
+      "Data-center cooling systems",
+      "Control system",
+      "PLC"
+    ],
+    "dependencies": [],
+    "trigger": null,
+    "customers_affected": null,
+    "financial_impact": "Not disclosed in the official incident report.",
+    "sla_impact": "Not disclosed in the official incident report.",
+    "data_gaps": [
+      "Customer counts and revenue impact not disclosed."
+    ],
+    "verification_status": "verified",
+    "source_publication_date": "2019-08-29",
+    "last_verified_at": "2026-11-13",
+    "id": "aws-2019-08-tokyo-cooling",
+    "company": "AWS",
+    "title": "EC2 and EBS service disruption in Tokyo",
+    "incident_date": "2019-08-23",
+    "start_time": "12:36 JST",
+    "end_time": null,
+    "duration": "Majority recovered by 18:30 JST",
+    "affected_products": [
+      "Amazon EC2",
+      "Amazon EBS",
+      "RDS",
+      "ElastiCache"
+    ],
+    "affected_services": [
+      "Amazon EC2",
+      "Amazon EBS",
+      "RDS",
+      "ElastiCache"
+    ],
+    "category": "Cloud infrastructure failures",
+    "incident_type": "outage",
+    "tags": [
+      "Cloud infrastructure failures"
+    ],
+    "investigation_summary": "Some EC2 instances shut down and EBS performance degraded in a Tokyo Availability Zone; instance launch operations were also impaired.",
+    "symptoms": [
+      "Instances shut down",
+      "EBS volume performance degraded",
+      "RunInstances and Auto Scaling launches failed for a period"
+    ],
+    "technical_root_cause": "A data-center control-system failover malfunction caused redundant cooling systems to fail; excessive heat shut down servers.",
+    "customer_impact": "Cooling restored at 15:21 JST; most instances/volumes recovered by 18:30 JST. A small number required retirement.",
+    "business_impact": "Cooling restored at 15:21 JST; most instances/volumes recovered by 18:30 JST. A small number required retirement.",
+    "recovery_actions": [
+      "Restored cooling, temperatures and power; recovered instances/volumes; repaired launch API and Auto Scaling impact."
+    ],
+    "preventive_actions": [
+      "Change control path to allow purge mode to bypass PLCs; train operators to recognize/control failure."
+    ],
+    "sources": [
+      {
+        "url": "https://aws.amazon.com/message/56489/",
+        "source_type": "postmortem",
+        "publication_date": "2019-08-29",
+        "status_url": "https://health.aws.amazon.com/health/status",
+        "evidence_notes": "Official AWS report links overheating to cooling control failure and records recovery milestones.",
+        "verified_at": "2026-11-13"
+      }
+    ]
+  },
+  {
+    "severity": "high",
+    "severity_basis": "IncidentIQ demo classification based on the documented production availability impact; this is not the company's severity label.",
+    "environment": "production",
+    "reported_errors": [],
+    "documented_metrics": [
+      {
+        "name": "kinesis_normal_recovery_time",
+        "value": "10:23 PM",
+        "unit": "PST",
+        "scope": "Kinesis Data Streams",
+        "evidence": "AWS says Kinesis fully returned to normal at 10:23 PM PST."
+      },
+      {
+        "name": "cognito_normal_recovery_time",
+        "value": "2:18 PM",
+        "unit": "PST",
+        "scope": "Cognito User Pools and Identity Pools",
+        "evidence": "AWS says Cognito was operating normally by 2:18 PM PST."
+      },
+      {
+        "name": "lambda_invocation_error_mitigation_time",
+        "value": "10:36 AM",
+        "unit": "PST",
+        "scope": "Lambda invocation errors associated with metric-buffer memory contention",
+        "evidence": "AWS says engineers acted at 10:36 AM PST and resolved the increased invocation errors."
+      },
+      {
+        "name": "cloudwatch_metrics_alarm_recovery_time",
+        "value": "10:31 PM",
+        "unit": "PST",
+        "scope": "CloudWatch metrics and alarms",
+        "evidence": "AWS says metrics and alarms fully recovered by 10:31 PM PST."
+      }
+    ],
+    "infrastructure": [
+      "Kinesis backend cells",
+      "CloudWatch metrics",
+      "Lambda host metric agents"
+    ],
+    "dependencies": [
+      "CloudWatch",
+      "EventBridge"
+    ],
+    "trigger": "A front-end capacity addition that completed shortly before error alarms began.",
+    "customers_affected": null,
+    "financial_impact": "Not disclosed in the official incident report.",
+    "sla_impact": "Not disclosed in the official incident report.",
+    "data_gaps": [
+      "Affected customer and organization counts were not disclosed.",
+      "AWS did not quantify revenue or financial loss.",
+      "Kinesis front-end fleet size is described only as many thousands of servers."
+    ],
+    "verification_status": "verified",
+    "source_publication_date": null,
+    "last_verified_at": "2026-11-13",
+    "id": "aws-2020-11-kinesis",
+    "company": "AWS",
+    "title": "Kinesis and dependent AWS services disruption in US-EAST-1",
+    "incident_date": "2020-11-25",
+    "start_time": "02:44 PST capacity addition trigger",
+    "end_time": null,
+    "duration": "Varied by dependent service",
+    "affected_products": [
+      "Amazon Kinesis",
+      "CloudWatch",
+      "Lambda",
+      "EventBridge",
+      "ECS",
+      "EKS"
+    ],
+    "affected_services": [
+      "Amazon Kinesis",
+      "CloudWatch",
+      "Lambda",
+      "EventBridge",
+      "ECS",
+      "EKS"
+    ],
+    "category": "Message queue failures",
+    "incident_type": "degradation",
+    "tags": [
+      "Message queue failures"
+    ],
+    "investigation_summary": "Kinesis and services relying on its event or metric paths experienced errors, delays, and backlogs; AWS documented Lambda invocation errors and host memory contention.",
+    "symptoms": [
+      "CloudWatch Events/EventBridge API errors and delivery delays",
+      "Lambda invocation errors increased",
+      "Auto Scaling metrics delayed"
+    ],
+    "technical_root_cause": "Adding capacity to the Kinesis front-end fleet caused existing servers to establish per-server communication threads with new servers. Fleet growth pushed thread counts above the operating-system limit; shard-map cache construction then failed, leaving front-end servers unable to route requests to backend clusters. AWS explicitly ruled out the initially suspected memory-pressure explanation as the Kinesis root cause.",
+    "customer_impact": "Kinesis errors affected dependent services. Cognito users experienced elevated API failures and could be unable to authenticate or obtain temporary credentials; CloudWatch metric/log APIs had errors and latency with gaps in persisted telemetry; Lambda invocation errors increased from local metric-buffer memory contention; EventBridge, ECS/EKS provisioning and scaling workflows were delayed.",
+    "business_impact": "AWS customers experienced impaired streaming, authentication/credential, monitoring, serverless invocation, and container orchestration workflows. AWS did not publish a customer count or revenue loss.",
+    "recovery_actions": [
+      "Removed the capacity addition, then restarted Kinesis front-end servers gradually to rebuild shard-map caches and restore traffic; Kinesis returned to normal at 10:23 PM PST.",
+      "Deployed a Cognito change to reduce dependency on Kinesis; Cognito returned to normal by 2:18 PM PST.",
+      "Mitigated Lambda invocation errors caused by local metric-buffer memory contention at 10:36 AM PST."
+    ],
+    "preventive_actions": [
+      "Move to larger CPU/memory servers and reduce fleet thread demand.",
+      "Add fine-grained thread-consumption alarms and test a higher OS thread limit.",
+      "Improve cold starts and move shard-map cache to a dedicated fleet.",
+      "Partition front-end fleets for large dependent AWS services and accelerate cellularization.",
+      "Change Cognito so Kinesis errors do not exhaust its buffers.",
+      "Persist three hours of metric data locally in CloudWatch; change completed in us-east-1 at publication time."
+    ],
+    "sources": [
+      {
+        "url": "https://aws.amazon.com/message/11201/",
+        "source_type": "postmortem",
+        "publication_date": null,
+        "status_url": "https://health.aws.amazon.com/health/status",
+        "evidence_notes": "AWS post-event summary states capacity addition, OS thread limit exhaustion, failed shard-map construction, dependent Cognito/CloudWatch/Lambda/EventBridge impacts, recovery timelines, and preventive measures; AWS specifically says Kinesis root cause was not memory pressure.",
+        "verified_at": "2026-11-13"
+      }
+    ]
+  },
+  {
+    "severity": "high",
+    "severity_basis": "IncidentIQ demo classification based on the documented production availability impact; this is not the company's severity label.",
+    "environment": "production",
+    "reported_errors": [],
+    "documented_metrics": [
+      {
+        "name": "impact_to_full_recovery",
+        "value": 372,
+        "unit": "minutes",
+        "scope": "Direct Connect Tokyo",
+        "evidence": "Calculated from 07:30 to 13:42 JST."
+      }
+    ],
+    "infrastructure": [
+      "Direct Connect network devices",
+      "Device operating system/protocol"
+    ],
+    "dependencies": [],
+    "trigger": null,
+    "customers_affected": null,
+    "financial_impact": "Not disclosed in the official incident report.",
+    "sla_impact": "Not disclosed in the official incident report.",
+    "data_gaps": [
+      "Exact packet-loss percent and customer counts not disclosed."
+    ],
+    "verification_status": "verified",
+    "source_publication_date": "2021-09-13",
+    "last_verified_at": "2026-11-13",
+    "id": "aws-2021-09-direct-connect",
+    "company": "AWS",
+    "title": "Direct Connect packet loss in Tokyo",
+    "incident_date": "2021-09-02",
+    "start_time": "07:30 JST",
+    "end_time": "13:42 JST",
+    "duration": "6 hours 12 minutes",
+    "affected_products": [
+      "AWS Direct Connect",
+      "Tokyo VPC connectivity"
+    ],
+    "affected_services": [
+      "AWS Direct Connect",
+      "Tokyo VPC connectivity"
+    ],
+    "category": "Network outages",
+    "incident_type": "degradation",
+    "tags": [
+      "Network outages"
+    ],
+    "investigation_summary": "AWS Direct Connect customers in Tokyo experienced intermittent connectivity and elevated packet loss; other paths were not reported as affected.",
+    "symptoms": [
+      "Intermittent connectivity",
+      "Elevated packet loss"
+    ],
+    "technical_root_cause": "A latent network-device OS/protocol bug caused devices in one network layer to stop forwarding some customer packets; automation detected unusually high device failures.",
+    "customer_impact": "Impact began 07:30 JST; recovery started 12:30 and fully resolved at 13:42 JST.",
+    "business_impact": "Impact began 07:30 JST; recovery started 12:30 and fully resolved at 13:42 JST.",
+    "recovery_actions": [
+      "Removed failing devices from service and disabled the new protocol in Tokyo."
+    ],
+    "preventive_actions": [
+      "Developed enhanced detection/remediation before applying protocol changes elsewhere."
+    ],
+    "sources": [
+      {
+        "url": "https://aws.amazon.com/tw/message/17908/",
+        "source_type": "postmortem",
+        "publication_date": "2021-09-13",
+        "status_url": "https://health.aws.amazon.com/health/status",
+        "evidence_notes": "Official AWS report gives path, packet loss/connectivity symptoms, times, protocol bug, rollback and preventive detection.",
+        "verified_at": "2026-11-13"
+      }
+    ]
+  },
+  {
+    "severity": "high",
+    "severity_basis": "IncidentIQ demo classification based on the documented production availability impact; this is not the company's severity label.",
+    "environment": "production",
+    "reported_errors": [],
+    "documented_metrics": [
+      {
+        "name": "ec2_api_recovery_start",
+        "value": "1:15 PM",
+        "unit": "PST",
+        "scope": "EC2 API improvements",
+        "evidence": "AWS published 1:15 PM PST initial EC2 API improvement."
+      },
+      {
+        "name": "new_ec2_launch_recovery",
+        "value": "2:40 PM",
+        "unit": "PST",
+        "scope": "new EC2 launches",
+        "evidence": "AWS published 2:40 PM PST launch recovery."
+      }
+    ],
+    "infrastructure": [
+      "AWS internal network",
+      "NAT/routing devices",
+      "Internal DNS"
+    ],
+    "dependencies": [],
+    "trigger": null,
+    "customers_affected": null,
+    "financial_impact": "Not disclosed in the official incident report.",
+    "sla_impact": "Not disclosed in the official incident report.",
+    "data_gaps": [
+      "No global customer count or exact request error rates published."
+    ],
+    "verification_status": "verified",
+    "source_publication_date": "2021-12-10",
+    "last_verified_at": "2026-11-13",
+    "id": "aws-2021-12-internal-network",
+    "company": "AWS",
+    "title": "US-EAST-1 internal network congestion event",
+    "incident_date": "2021-12-07",
+    "start_time": "07:30 PST",
+    "end_time": null,
+    "duration": "Several hours; service recovery varied",
+    "affected_products": [
+      "EC2 APIs",
+      "RDS",
+      "EMR",
+      "WorkSpaces",
+      "Internal monitoring",
+      "Internal DNS"
+    ],
+    "affected_services": [
+      "EC2 APIs",
+      "RDS",
+      "EMR",
+      "WorkSpaces",
+      "Internal monitoring",
+      "Internal DNS"
+    ],
+    "category": "Network outages",
+    "incident_type": "degradation",
+    "tags": [
+      "Network outages"
+    ],
+    "investigation_summary": "AWS customers experienced control-plane latency and errors, including EC2 API and new-resource launch failures; some monitoring telemetry was unavailable or delayed.",
+    "symptoms": [
+      "EC2 API errors and latency",
+      "New resource launches failed",
+      "Monitoring telemetry unavailable/delayed"
+    ],
+    "technical_root_cause": "Automated service scaling triggered a large connection surge/retry storm between AWS internal and main networks, overwhelming networking devices; monitoring data sharing that path was impaired.",
+    "customer_impact": "Running EC2 instances were unaffected; EC2 APIs began improving at 13:15 PST and new launches recovered by 14:40 PST.",
+    "business_impact": "Running EC2 instances were unaffected; EC2 APIs began improving at 13:15 PST and new launches recovered by 14:40 PST.",
+    "recovery_actions": [
+      "Reduced congestion and mitigated connection/retry behavior; relied on logs while monitoring telemetry degraded."
+    ],
+    "preventive_actions": [
+      "Post-event report describes client/network resilience and monitoring improvements."
+    ],
+    "sources": [
+      {
+        "url": "https://aws.amazon.com/message/12721/",
+        "source_type": "postmortem",
+        "publication_date": "2021-12-10",
+        "status_url": "https://health.aws.amazon.com/health/status",
+        "evidence_notes": "AWS report states control-plane impact and makes clear running customer workloads were not directly affected.",
+        "verified_at": "2026-11-13"
+      }
+    ]
+  },
+  {
+    "severity": "high",
+    "severity_basis": "IncidentIQ demo classification based on the documented production availability impact; this is not the company's severity label.",
+    "environment": "production",
+    "reported_errors": [],
+    "documented_metrics": [],
+    "infrastructure": [
+      "Global backbone routers",
+      "Authoritative DNS",
+      "BGP"
+    ],
+    "dependencies": [],
+    "trigger": null,
+    "customers_affected": null,
+    "financial_impact": "Not disclosed in the official incident report.",
+    "sla_impact": "Not disclosed in the official incident report.",
+    "data_gaps": [
+      "Exact incident start/end, customer count and per-service error rates not quantified in this engineering article."
+    ],
+    "verification_status": "verified",
+    "source_publication_date": "2021-10-05",
+    "last_verified_at": "2026-11-13",
+    "id": "meta-2021-10-backbone",
+    "company": "Meta",
+    "title": "October 4 global backbone/DNS outage",
+    "incident_date": "2021-10-04",
+    "start_time": null,
+    "end_time": null,
+    "duration": null,
+    "affected_products": [
+      "Facebook",
+      "Instagram",
+      "WhatsApp",
+      "Meta backbone"
+    ],
+    "affected_services": [
+      "Facebook",
+      "Instagram",
+      "WhatsApp",
+      "Meta internal tools"
+    ],
+    "category": "BGP routing failures",
+    "incident_type": "outage",
+    "tags": [
+      "BGP routing failures"
+    ],
+    "investigation_summary": "Facebook, Instagram, and WhatsApp became unreachable for users around the world; Meta employees also lost access to some internal diagnostic tools.",
+    "symptoms": [
+      "Facebook/Instagram/WhatsApp unavailable",
+      "Authoritative DNS unreachable",
+      "Internal diagnostic tools inaccessible"
+    ],
+    "technical_root_cause": "A maintenance command intended to assess backbone capacity disconnected all backbone connections; a bug in the command-audit tool failed to block it. DNS health automation withdrew BGP advertisements when facilities could not reach datacenters.",
+    "customer_impact": "Global platform outage; exact per-customer request rate and duration are not quantified in the engineering report.",
+    "business_impact": "Global platform outage; exact per-customer request rate and duration are not quantified in the engineering report.",
+    "recovery_actions": [
+      "Onsite engineers used secure out-of-band access to restore backbone connectivity; services recovered as backbone returned."
+    ],
+    "preventive_actions": [
+      "Improve command auditing and network resilience; review DNS/BGP dependency and operational access procedures."
+    ],
+    "sources": [
+      {
+        "url": "https://engineering.fb.com/2021/10/05/networking-traffic/outage-details/",
+        "source_type": "postmortem",
+        "publication_date": "2021-10-05",
+        "status_url": "https://metastatus.com/",
+        "evidence_notes": "Official Meta engineering report details command/audit bug, DNS BGP withdrawals, and recovery obstacles.",
+        "verified_at": "2026-11-13"
+      }
+    ]
+  },
+  {
+    "severity": "critical",
+    "severity_basis": "IncidentIQ demo classification based on the documented production availability impact; this is not the company's severity label.",
+    "environment": "production",
+    "reported_errors": [
+      "Error responses; exact status code not stated in article."
+    ],
+    "documented_metrics": [
+      {
+        "name": "network_error_scope",
+        "value": 85,
+        "unit": "percent",
+        "scope": "Fastly network",
+        "evidence": "Official incident summary."
+      },
+      {
+        "name": "network_normal_after",
+        "value": 95,
+        "unit": "percent",
+        "scope": "Fastly network",
+        "evidence": "Within 49 minutes per official summary."
+      }
+    ],
+    "infrastructure": [
+      "Fastly edge software",
+      "Configuration deployment"
+    ],
+    "dependencies": [],
+    "trigger": null,
+    "customers_affected": null,
+    "financial_impact": "Not disclosed in the official incident report.",
+    "sla_impact": "Not disclosed in the official incident report.",
+    "data_gaps": [],
+    "verification_status": "verified",
+    "source_publication_date": "2021-06-08",
+    "last_verified_at": "2026-11-13",
+    "id": "fastly-2021-06-config-bug",
+    "company": "Fastly",
+    "title": "Global outage triggered by valid customer configuration",
+    "incident_date": "2021-06-08",
+    "start_time": "09:47 UTC",
+    "end_time": "12:44 UTC",
+    "duration": "95% normal within 49 minutes; resolved 2h57 after onset",
+    "affected_products": [
+      "Fastly edge network",
+      "Customer websites"
+    ],
+    "affected_services": [
+      "Fastly edge network",
+      "Customer websites"
+    ],
+    "category": "CDN failures",
+    "incident_type": "outage",
+    "tags": [
+      "CDN failures"
+    ],
+    "investigation_summary": "Fastly customers saw errors across much of the CDN network. Fastly reported that about 85% of the network returned errors at peak.",
+    "symptoms": [
+      "85% of network returned errors",
+      "Customer websites using Fastly failed"
+    ],
+    "technical_root_cause": "A May 12 software deployment introduced an undiscovered bug triggered by a valid customer configuration change.",
+    "customer_impact": "Within 49 minutes, 95% of network was operating normally; incident was resolved 12:44 UTC.",
+    "business_impact": "Within 49 minutes, 95% of network was operating normally; incident was resolved 12:44 UTC.",
+    "recovery_actions": [
+      "Identified and isolated cause within minutes, disabled configuration, then deployed permanent bug fix."
+    ],
+    "preventive_actions": [
+      "Improve QA/testing to detect bug, speed mitigation, and use WebAssembly/Compute@Edge isolation."
+    ],
+    "sources": [
+      {
+        "url": "https://www.fastly.com/blog/summary-of-june-8-outage",
+        "source_type": "postmortem",
+        "publication_date": "2021-06-08",
+        "status_url": "https://www.fastlystatus.com/",
+        "evidence_notes": "Fastly official postmortem provides 85% error scope, recovery timeline and deployment-trigger chain.",
+        "verified_at": "2026-11-13"
+      }
+    ]
+  },
+  {
+    "severity": "high",
+    "severity_basis": "IncidentIQ demo classification based on the documented production availability impact; this is not the company's severity label.",
+    "environment": "production",
+    "reported_errors": [],
+    "documented_metrics": [
+      {
+        "name": "most_functionality_recovery",
+        "value": 180,
+        "unit": "minutes",
+        "scope": "Dropbox service",
+        "evidence": "Dropbox says most functionality within three hours."
+      }
+    ],
+    "infrastructure": [
+      "MySQL master/replica machines",
+      "OS upgrade script",
+      "Backups"
+    ],
+    "dependencies": [],
+    "trigger": null,
+    "customers_affected": null,
+    "financial_impact": "Not disclosed in the official incident report.",
+    "sla_impact": "Not disclosed in the official incident report.",
+    "data_gaps": [
+      "Date of the Friday event is stated indirectly; estimated from Jan 12 article and day-of-week; verify exact event date before asserting."
+    ],
+    "verification_status": "verified",
+    "source_publication_date": "2014-01-12",
+    "last_verified_at": "2026-11-13",
+    "id": "dropbox-2014-01-maintenance",
+    "company": "Dropbox",
+    "title": "Database outage during scheduled machine maintenance",
+    "incident_date": "2014-01-10",
+    "start_time": "Friday 17:30 PT scheduled maintenance",
+    "end_time": null,
+    "duration": "Most service ~3h; core restored Sunday 16:40 PT",
+    "affected_products": [
+      "Dropbox website",
+      "Photo sharing",
+      "Camera uploads",
+      "Some API features"
+    ],
+    "affected_services": [
+      "Dropbox website",
+      "Photo sharing",
+      "Camera uploads",
+      "Some API features"
+    ],
+    "category": "Database failures",
+    "incident_type": "outage",
+    "tags": [
+      "Database failures"
+    ],
+    "investigation_summary": "Dropbox website features were unavailable during recovery. Dropbox stated that the affected databases did not contain file contents.",
+    "symptoms": [
+      "Dropbox site and features unavailable",
+      "File contents were not at risk because affected DBs stored metadata/features"
+    ],
+    "technical_root_cause": "A remote production-state verification script failed to detect that a handful of machines were serving production, so planned OS upgrade affected live database master/replica pairs.",
+    "customer_impact": "Most functionality restored within about three hours; core service fully restored Sunday at 16:40 PT.",
+    "business_impact": "Most functionality restored within about three hours; core service fully restored Sunday at 16:40 PT.",
+    "recovery_actions": [
+      "Recovered from backups; later developed parallel binary-log replay to improve large database recovery."
+    ],
+    "preventive_actions": [
+      "Add local machine state checks before destructive commands; speed backup recovery by parallelizing binlog replay."
+    ],
+    "sources": [
+      {
+        "url": "https://dropbox.tech/infrastructure/outage-post-mortem",
+        "source_type": "postmortem",
+        "publication_date": "2014-01-12",
+        "status_url": "https://status.dropbox.com/",
+        "evidence_notes": "Official Dropbox postmortem dates article and details maintenance script, database effects and recovery improvements.",
+        "verified_at": "2026-11-13"
+      }
+    ]
+  },
+  {
+    "severity": "critical",
+    "severity_basis": "IncidentIQ demo classification based on the documented production availability impact; this is not the company's severity label.",
+    "environment": "production",
+    "reported_errors": [],
+    "documented_metrics": [
+      {
+        "name": "sites_deleted",
+        "value": 883,
+        "unit": "sites",
+        "scope": "Atlassian sites",
+        "evidence": "Official PIR."
+      },
+      {
+        "name": "customers_affected",
+        "value": 775,
+        "unit": "customers",
+        "scope": "Atlassian official customer definition",
+        "evidence": "Official PIR."
+      },
+      {
+        "name": "customers_unaffected",
+        "value": 99.6,
+        "unit": "percent minimum",
+        "scope": "Customers/users",
+        "evidence": "Official PIR says over 99.6% continued without disruption."
+      },
+      {
+        "name": "maximum_data_loss",
+        "value": 5,
+        "unit": "minutes",
+        "scope": "Any affected customer",
+        "evidence": "Official PIR says no customer lost more than 5 minutes."
+      }
+    ],
+    "infrastructure": [
+      "Site/app deletion API",
+      "Restoration automation",
+      "Multi-product cloud services"
+    ],
+    "dependencies": [],
+    "trigger": null,
+    "customers_affected": "775 customers disclosed; 883 sites.",
+    "financial_impact": "Revenue impact not disclosed; company described service commitments and customer restoration.",
+    "sla_impact": "PIR references published SLAs; actual credits paid are not disclosed.",
+    "data_gaps": [],
+    "verification_status": "verified",
+    "source_publication_date": "2022-04-29",
+    "last_verified_at": "2026-11-13",
+    "id": "atlassian-2022-04-site-deletion",
+    "company": "Atlassian",
+    "title": "April 2022 customer site deletion incident",
+    "incident_date": "2022-04-05",
+    "start_time": "07:38 UTC",
+    "end_time": "08:01 UTC deletion script",
+    "duration": "Up to 14 days for subset; all restored Apr 18",
+    "affected_products": [
+      "Jira",
+      "Confluence",
+      "Atlassian Access",
+      "Opsgenie",
+      "Statuspage"
+    ],
+    "affected_services": [
+      "Jira",
+      "Confluence",
+      "Atlassian Access",
+      "Opsgenie",
+      "Statuspage"
+    ],
+    "category": "Data corruption incidents",
+    "incident_type": "outage",
+    "tags": [
+      "Data corruption incidents"
+    ],
+    "investigation_summary": "Affected Jira-family and Confluence customer sites were unavailable until restoration. Atlassian reported that no customer lost more than five minutes of data.",
+    "symptoms": [
+      "Jira-family products and Confluence unavailable for affected sites",
+      "Some deleted customer contact information complicated support"
+    ],
+    "technical_root_cause": "The deletion script received whole-site IDs instead of app IDs; the API accepted both identifier types without validation or a warning.",
+    "customer_impact": "883 sites / 775 customers; some affected up to 14 days; over 99.6% of customers/users continued unaffected; no customer lost over five minutes of data.",
+    "business_impact": "775 customers lost access to products; subset outage lasted up to 14 days. More than 99.6% of customers/users remained unaffected, and no customer lost more than five minutes of data.",
+    "recovery_actions": [
+      "Cross-functional team restored and validated sites from April 8 through April 18."
+    ],
+    "preventive_actions": [
+      "Universal soft delete, staged rollout and tested rollback, larger-scale DR exercises, improved incident coordination and communications."
+    ],
+    "sources": [
+      {
+        "url": "https://www.atlassian.com/blog/how-we-build/post-incident-review-april-2022-outage",
+        "source_type": "postmortem",
+        "publication_date": "2022-04-29",
+        "status_url": "https://status.atlassian.com/history",
+        "evidence_notes": "Atlassian PIR states script ran 07:38–08:01, deleted 883 sites/775 customers, no >5 min data loss, 99.6%+ unaffected and restore dates.",
+        "verified_at": "2026-11-13"
+      }
+    ]
+  },
+  {
+    "severity": "critical",
+    "severity_basis": "IncidentIQ demo classification based on the documented production availability impact; this is not the company's severity label.",
+    "environment": "production",
+    "reported_errors": [],
+    "documented_metrics": [
+      {
+        "name": "http_200_availability",
+        "value": 25,
+        "unit": "percent",
+        "scope": "Discord requests during outage",
+        "evidence": "Discord measures availability by HTTP 200 responses and reports ~25%."
+      }
+    ],
+    "infrastructure": [
+      "ScyllaDB auth cluster",
+      "Cloud instance disk"
+    ],
+    "dependencies": [],
+    "trigger": null,
+    "customers_affected": null,
+    "financial_impact": "Not disclosed in the official incident report.",
+    "sla_impact": "Not disclosed in the official incident report.",
+    "data_gaps": [],
+    "verification_status": "verified",
+    "source_publication_date": "2023-11-15",
+    "last_verified_at": "2026-11-13",
+    "id": "discord-2023-11-auth",
+    "company": "Discord",
+    "title": "Authentication outage caused by ScyllaDB overload",
+    "incident_date": "2023-11-06",
+    "start_time": "10:52 PST",
+    "end_time": null,
+    "duration": "Approximately 50 minutes",
+    "affected_products": [
+      "Discord authentication",
+      "Discord messaging"
+    ],
+    "affected_services": [
+      "Discord authentication",
+      "Discord messaging"
+    ],
+    "category": "Authentication failures",
+    "incident_type": "outage",
+    "tags": [
+      "Authentication failures"
+    ],
+    "investigation_summary": "Discord users could not reliably authenticate or access messaging; HTTP 200 response availability fell to about 25% during the incident.",
+    "symptoms": [
+      "Authentication unavailable",
+      "HTTP 200 response availability fell to approximately 25%"
+    ],
+    "technical_root_cause": "Operating-system upgrade took one ScyllaDB zone offline while a degraded disk in another zone reduced capacity, overloading an underprovisioned authentication cluster.",
+    "customer_impact": "Approximately 50 minutes from 10:52 PST; availability fell to about 25%.",
+    "business_impact": "Approximately 50 minutes from 10:52 PST; availability fell to about 25%.",
+    "recovery_actions": [
+      "Engineers restored the impacted zone/cluster and recovered authentication service."
+    ],
+    "preventive_actions": [
+      "Improve authentication-cluster architecture, provisioning and OS upgrade procedure."
+    ],
+    "sources": [
+      {
+        "url": "https://discord.com/blog/authentication-outage",
+        "source_type": "postmortem",
+        "publication_date": "2023-11-15",
+        "status_url": "https://discordstatus.com/",
+        "evidence_notes": "Discord engineering report states outage, duration, auth symptoms, ScyllaDB upgrade/degraded disk chain and 25% availability.",
+        "verified_at": "2026-11-13"
+      }
+    ]
+  },
+  {
+    "severity": "critical",
+    "severity_basis": "IncidentIQ demo classification based on the documented production availability impact; this is not the company's severity label.",
+    "environment": "production",
+    "reported_errors": [],
+    "documented_metrics": [
+      {
+        "name": "session_servers_lost",
+        "value": 17,
+        "unit": "percent",
+        "scope": "Discord session service",
+        "evidence": "Official postmortem states 17% of sessions at once."
+      }
+    ],
+    "infrastructure": [
+      "Kubernetes",
+      "Elixir session services",
+      "Connection supervisors",
+      "etcd service discovery",
+      "Voice SFUs"
+    ],
+    "dependencies": [],
+    "trigger": null,
+    "customers_affected": null,
+    "financial_impact": "Not disclosed in the official incident report.",
+    "sla_impact": "Not disclosed in the official incident report.",
+    "data_gaps": [],
+    "verification_status": "verified",
+    "source_publication_date": "2026-04-29",
+    "last_verified_at": "2026-11-13",
+    "id": "discord-2026-03-voice",
+    "company": "Discord",
+    "title": "Voice and video outage after session configuration update",
+    "incident_date": "2026-03-25",
+    "start_time": "12:13 PDT",
+    "end_time": "15:30 PDT",
+    "duration": "3 hours 17 minutes",
+    "affected_products": [
+      "Discord Voice",
+      "Discord Video"
+    ],
+    "affected_services": [
+      "Discord Voice",
+      "Discord Video"
+    ],
+    "category": "Kubernetes failures",
+    "incident_type": "degradation",
+    "tags": [
+      "Kubernetes failures"
+    ],
+    "investigation_summary": "Most Discord users could not start or join voice/video calls; users reported an ?Awaiting Endpoint? status during the outage.",
+    "symptoms": [
+      "Voice/video calls unavailable for most users",
+      "Awaiting Endpoint status",
+      "Session servers disconnected"
+    ],
+    "technical_root_cause": "A routine configuration update during Kubernetes migration shut down a large portion of session-management servers; downstream connection supervisors and voice routing were overwhelmed by reconnect/spawn load.",
+    "customer_impact": "Major degradation from 12:13 to 15:30 PDT (3h17); 17% of sessions were lost at once.",
+    "business_impact": "Major degradation from 12:13 to 15:30 PDT (3h17); 17% of sessions were lost at once.",
+    "recovery_actions": [
+      "Reduced downstream pressure and recovered voice/video services; one targeted supervisor restart was tried and did not help."
+    ],
+    "preventive_actions": [
+      "Add validating Kubernetes admission webhook and graceful drain requirements; increase voice-system parallelism and monitoring; plan regional control-plane scaling."
+    ],
+    "sources": [
+      {
+        "url": "https://discord.com/blog/behind-the-scenes-of-the-3-25-26-voice-outage",
+        "source_type": "postmortem",
+        "publication_date": "2026-04-29",
+        "status_url": "https://discordstatus.com/",
+        "evidence_notes": "Discord engineering article gives timeline, 17% sessions lost, symptoms and preventative changes.",
+        "verified_at": "2026-11-13"
+      }
+    ]
+  },
+  {
+    "severity": "high",
+    "severity_basis": "IncidentIQ demo classification based on the documented production availability impact; this is not the company's severity label.",
+    "environment": "production",
+    "reported_errors": [],
+    "documented_metrics": [
+      {
+        "name": "duration",
+        "value": 110,
+        "unit": "minutes",
+        "scope": "asia-northeast1 products",
+        "evidence": "Mini incident report states 1h50."
+      }
+    ],
+    "infrastructure": [],
+    "dependencies": [],
+    "trigger": "Routine metadata-store software version update.",
+    "customers_affected": null,
+    "financial_impact": "Not disclosed in the official incident report.",
+    "sla_impact": "Not disclosed in the official incident report.",
+    "data_gaps": [
+      "Per-product customer counts and financial impact were not disclosed."
+    ],
+    "verification_status": "verified",
+    "source_publication_date": null,
+    "last_verified_at": "2026-11-13",
+    "id": "google-2024-09-asia",
+    "company": "Google Cloud",
+    "title": "Google Cloud asia-northeast1 multi-service incident",
+    "incident_date": "2024-09-07",
+    "start_time": "04:20 PDT",
+    "end_time": "06:10 PDT",
+    "duration": "1 hour 50 minutes",
+    "affected_products": [
+      "Cloud Build",
+      "Dataflow",
+      "Cloud Deploy",
+      "Cloud SQL",
+      "Compute Engine",
+      "GKE"
+    ],
+    "affected_services": [
+      "Cloud Build",
+      "Dataflow",
+      "Cloud Deploy",
+      "Cloud SQL",
+      "Compute Engine",
+      "GKE"
+    ],
+    "category": "Deployment failures",
+    "incident_type": "degradation",
+    "tags": [
+      "Deployment failures"
+    ],
+    "investigation_summary": "Customers in asia-northeast1 could not perform some VM operations; Cloud Build and Dataflow jobs failed to start, and other dependent service operations stalled.",
+    "symptoms": [
+      "VM operations failed",
+      "Cloud Build jobs did not execute",
+      "Dataflow jobs failed at startup/autoscaling disrupted",
+      "Cloud Deploy tasks stalled"
+    ],
+    "technical_root_cause": "A metadata-store software update handled a rare resource-contention corner case poorly, causing GCE internal DNS writes to fail. A secondary automated-failover issue left the regional metadata store unavailable despite healthy replicas.",
+    "customer_impact": "Reported duration 1h50; issue later marked resolved.",
+    "business_impact": "Reported duration 1h50; issue later marked resolved.",
+    "recovery_actions": [
+      "Engineers manually initiated failover of metadata storage operations to healthy zones; service mitigated at 06:10 US/Pacific."
+    ],
+    "preventive_actions": [
+      "Improve automated metadata-store failover logic.",
+      "Improve testing for resource-contention corner cases.",
+      "Improve response processes and documentation."
+    ],
+    "sources": [
+      {
+        "url": "https://status.cloud.google.com/incidents/XwnegjADrYy2GHJphG2V",
+        "source_type": "status_report",
+        "publication_date": null,
+        "status_url": "https://status.cloud.google.com/",
+        "evidence_notes": "Final Google incident report documents the metadata store update, resource-contention corner case, failover failure, 1h50 duration, and corrective actions.",
+        "verified_at": "2026-11-13"
+      }
+    ]
+  },
+  {
+    "severity": "critical",
+    "severity_basis": "IncidentIQ demo classification based on the documented production availability impact; this is not the company's severity label.",
+    "environment": "production",
+    "reported_errors": [],
+    "documented_metrics": [
+      {
+        "name": "overall_duration",
+        "value": 193,
+        "unit": "minutes",
+        "scope": "Google Cloud australia-southeast2",
+        "evidence": "Official mini report."
+      },
+      {
+        "name": "longest_regional_impact",
+        "value": 123,
+        "unit": "minutes",
+        "scope": "Affected services",
+        "evidence": "Official mini report says 2h03 longest."
+      }
+    ],
+    "infrastructure": [],
+    "dependencies": [],
+    "trigger": "Two fiber failures followed by a voltage swell at an australia-southeast2 network PoP.",
+    "customers_affected": null,
+    "financial_impact": "Not disclosed in the official incident report.",
+    "sla_impact": "Not disclosed in the official incident report.",
+    "data_gaps": [
+      "Customer counts and financial impact were not disclosed."
+    ],
+    "verification_status": "verified",
+    "source_publication_date": null,
+    "last_verified_at": "2026-11-13",
+    "id": "google-2024-10-australia",
+    "company": "Google Cloud",
+    "title": "Google Cloud australia-southeast2 multi-service incident",
+    "incident_date": "2024-10-29",
+    "start_time": "16:21 PDT",
+    "end_time": "19:34 PDT",
+    "duration": "3h13 overall; longest impact 2h03",
+    "affected_products": [
+      "Apigee",
+      "Batch",
+      "Filestore",
+      "Firestore",
+      "KMS",
+      "Cloud Run",
+      "BigQuery",
+      "Dataflow",
+      "Pub/Sub",
+      "Cloud SQL",
+      "GCS",
+      "Compute Engine",
+      "GKE",
+      "IAM"
+    ],
+    "affected_services": [
+      "Apigee",
+      "Batch",
+      "Filestore",
+      "Firestore",
+      "KMS",
+      "Cloud Run",
+      "BigQuery",
+      "Dataflow",
+      "Pub/Sub",
+      "Cloud SQL",
+      "GCS",
+      "Compute Engine",
+      "GKE",
+      "IAM"
+    ],
+    "category": "Cloud infrastructure failures",
+    "incident_type": "degradation",
+    "tags": [
+      "Cloud infrastructure failures"
+    ],
+    "investigation_summary": "Multiple Google Cloud products degraded in australia-southeast2. Apigee errors and latency rose, Batch jobs remained scheduled, and connectivity-sensitive operations failed.",
+    "symptoms": [
+      "Apigee 5XX errors and latency",
+      "Batch jobs remained SCHEDULED",
+      "Filestore operations failed",
+      "Cloud products unavailable/degraded"
+    ],
+    "technical_root_cause": "Two nearby fiber failures reduced available inter-region capacity; then a voltage swell at a network PoP hosting 50% of regional network capacity rebooted networking devices. Equipment rectifiers shut down because a UPS voltage regulator pushed voltage above the equipment tolerance.",
+    "customer_impact": "Incident 16:21–19:34 PDT; longest regional impact 2h03.",
+    "business_impact": "Incident 16:21–19:34 PDT; longest regional impact 2h03.",
+    "recovery_actions": [
+      "Impacted network paths recovered after devices rebooted; all affected zones regained full connectivity by 16:43 US/Pacific. Some services required manual recovery actions."
+    ],
+    "preventive_actions": [
+      "Review regional power distribution and add protections against voltage swells/sags.",
+      "Reconfigure UPS voltage regulator and institute monthly reviews.",
+      "Deploy double-conversion UPS.",
+      "Change network-device configuration to reduce recovery time.",
+      "Review other sites for the same risk."
+    ],
+    "sources": [
+      {
+        "url": "https://status.cloud.google.com/incidents/Pvq1RGrACDwogEE8hcrm",
+        "source_type": "postmortem",
+        "publication_date": null,
+        "status_url": "https://status.cloud.google.com/",
+        "evidence_notes": "Final Google report updated 4 Dec 2024 documents two fiber failures, voltage swell, 50% capacity PoP, device reboot, 21-minute multi-product loss, up to 15% latency/error-rate increase, root cause, and prevention.",
+        "verified_at": "2026-11-13"
+      }
+    ]
+  }
+]

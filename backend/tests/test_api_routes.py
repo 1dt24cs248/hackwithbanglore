@@ -121,6 +121,46 @@ class APIRouteTests(unittest.TestCase):
         self.assertEqual(len(detail.json()["data"]["logs"]), 2)
         self.assertEqual(self.client.get("/api/incidents/00000000-0000-0000-0000-000000000001").status_code, 404)
 
+    def test_verified_library_listing_search_filters_and_pagination(self):
+        first = self.client.get("/api/library/incidents?page=1&limit=2")
+        self.assertEqual(first.status_code, 200)
+        body = first.json()["data"]
+        self.assertGreaterEqual(body["total"], 30)
+        self.assertEqual(len(body["items"]), 2)
+        self.assertEqual(body["page"], 1)
+
+        cloudflare = self.client.get("/api/library/incidents?company=Cloudflare&limit=50").json()["data"]
+        self.assertGreaterEqual(cloudflare["total"], 1)
+        self.assertTrue(all(item["company"] == "Cloudflare" for item in cloudflare["items"]))
+        search = self.client.get("/api/library/incidents?search=ProxySQL").json()["data"]
+        self.assertGreaterEqual(search["total"], 1)
+        hidden = self.client.get("/api/library/incidents?verification_status=partially_verified").json()["data"]
+        self.assertEqual(hidden["total"], 0)
+
+    def test_library_detail_summary_and_not_found(self):
+        listing = self.client.get("/api/library/incidents?limit=1").json()["data"]
+        incident_id = listing["items"][0]["id"]
+        detail = self.client.get(f"/api/library/incidents/{incident_id}")
+        self.assertEqual(detail.status_code, 200)
+        self.assertTrue(detail.json()["data"]["sources"][0]["url"].startswith("https://"))
+        self.assertEqual(self.client.get("/api/library/incidents/missing-id").status_code, 404)
+        summary = self.client.get("/api/library/summary").json()["data"]
+        self.assertGreaterEqual(summary["verified_incidents"], 30)
+        self.assertTrue(any(item["covered"] for item in summary["taxonomy"]))
+
+    def test_library_load_creates_blind_investigation_input(self):
+        listing = self.client.get("/api/library/incidents?search=ProxySQL&limit=1").json()["data"]
+        library_record = listing["items"][0]
+        loaded = self.client.post(f"/api/library/incidents/{library_record['id']}/load")
+        self.assertEqual(loaded.status_code, 201)
+        created = loaded.json()["data"]
+        stored = self.client.get(f"/api/incidents/{created['incident_id']}").json()["data"]
+        self.assertEqual(stored["title"], library_record["title"])
+        self.assertEqual(stored["source"], f"real_library:{library_record['id']}")
+        self.assertEqual(stored["deployments"], [])
+        evidence_text = stored["description"] + " ".join(log["log_text"] for log in stored["logs"])
+        self.assertNotIn(library_record["technical_root_cause"] or "NO_CAUSE", evidence_text)
+
     def test_memory_off_does_not_recall_and_investigation_can_be_retrieved(self):
         response = self.client.post(f"/api/incidents/{self.incident_id}/investigate", json={"memory_mode":"MEMORY_OFF"})
         self.assertEqual(response.status_code, 201, response.text)
