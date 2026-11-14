@@ -36,6 +36,12 @@ from app.services.incident_library import (
     catalog_summary,
     library_categories,
 )
+from app.services.precedent_radar import (
+    incident_query_text,
+    public_documents,
+    rank_documents,
+    workspace_documents,
+)
 from app.services.hindsight_service import HindsightMemoryService
 from app.services.investigation_service import InvestigationService, InvestigationServiceError
 
@@ -241,6 +247,82 @@ def get_incident(incident_id: uuid.UUID, session: Session = Depends(get_db)) -> 
             "execution_status": run.execution_status,
             "created_at": _iso(run.created_at),
         } for run in sorted(incident.investigation_runs, key=lambda item: (item.created_at, str(item.id)), reverse=True)],
+    })
+
+
+@router.get("/incidents/{incident_id}/precedents")
+def get_incident_precedents(
+    incident_id: uuid.UUID,
+    limit: int = Query(default=5, ge=1, le=20),
+    session: Session = Depends(get_db),
+) -> dict[str, Any]:
+    """Return ranked precedents, clearly separated from confirmed diagnosis."""
+    incident = session.scalar(
+        select(Incident).options(
+            selectinload(Incident.logs),
+            selectinload(Incident.deployments),
+            selectinload(Incident.verified_resolutions),
+            selectinload(Incident.memory_events),
+        ).where(Incident.id == incident_id)
+    )
+    if incident is None:
+        raise _fail(InvestigationServiceError("incident_not_found"))
+
+    query_text = incident_query_text(incident)
+    library_id = (
+        incident.source.removeprefix("real_library:")
+        if incident.source.startswith("real_library:") else None
+    )
+    public_items = list_library_incidents(page=1, limit=50)["items"]
+    public_results = rank_documents(
+        query_text, public_documents(public_items, exclude_library_id=library_id), limit
+    )
+
+    try:
+        resolved = session.scalars(
+            select(Incident).options(
+                selectinload(Incident.logs),
+                selectinload(Incident.deployments),
+                selectinload(Incident.verified_resolutions),
+                selectinload(Incident.memory_events),
+            ).where(Incident.status == "resolved")
+        ).all()
+    except SQLAlchemyError:
+        raise HTTPException(status_code=503, detail={
+            "code": "DATABASE_UNAVAILABLE",
+            "message": "Verified workspace precedents are unavailable.",
+        }) from None
+
+    workspace_items = workspace_documents(resolved, incident_id)
+    workspace_results = rank_documents(query_text, workspace_items, limit)
+    # Reuse the existing resolution-retention audit interpretation.
+    for result in workspace_results:
+        source = next((item for item in workspace_items if item["id"] == result["id"]), None)
+        if source is not None:
+            resolution = next(
+                (item for item in resolved if str(item.id) == result["id"]), None
+            )
+            if resolution is not None:
+                resolutions = sorted(
+                    resolution.verified_resolutions,
+                    key=lambda item: (
+                        item.verified_at.replace(tzinfo=timezone.utc)
+                        if item.verified_at.tzinfo is None
+                        else item.verified_at.astimezone(timezone.utc),
+                        str(item.id),
+                    ),
+                    reverse=True,
+                )
+                result["memory_retention_status"] = _resolution_retention_status(
+                    session, resolution.id, resolutions[0], len(resolutions)
+                ) if resolutions else None
+
+    return _envelope({
+        "current_incident_id": str(incident.id),
+        "score_method": "TF-IDF cosine similarity per tier; score is cosine x 100, and scores across tiers are not directly comparable.",
+        "diagnosis_notice": "Historical precedents are investigative leads, not confirmed diagnoses.",
+        "verified_workspace": workspace_results,
+        "public_library": public_results,
     })
 
 

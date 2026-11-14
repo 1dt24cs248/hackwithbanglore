@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import os
 import unittest
+import uuid
+from datetime import datetime, timezone
 from unittest.mock import AsyncMock, Mock
 
 from fastapi.testclient import TestClient
@@ -160,6 +162,63 @@ class APIRouteTests(unittest.TestCase):
         self.assertEqual(stored["deployments"], [])
         evidence_text = stored["description"] + " ".join(log["log_text"] for log in stored["logs"])
         self.assertNotIn(library_record["technical_root_cause"] or "NO_CAUSE", evidence_text)
+
+    def test_precedents_rank_public_and_only_verified_resolved_workspace_records(self):
+        session = self.factory()
+        current = session.get(Incident, uuid.UUID(self.incident_id))
+        current.title = "BGP route withdrawal after network configuration deployment"
+        current.description = "Site-local prefixes stopped advertising and network routes became unreachable."
+        current.service_name = "network-routing"
+        current.source = "real_library:cloudflare-2022-06-bgp"
+        current.root_cause_summary = "CURRENT ROOT CAUSE MUST NOT BE USED AS A MATCH SIGNAL"
+
+        verified_id = uuid.uuid4()
+        previous = Incident(
+            id=verified_id, incident_number="INC-PREV-001",
+            title="Prior BGP route advertisement outage",
+            description="Routing configuration removed site-local prefixes from advertisements.",
+            service_name="network-routing", environment="production", severity="high",
+            status="resolved", source="api",
+        )
+        resolution_id = uuid.uuid4()
+        previous.verified_resolutions.append(VerifiedResolution(
+            id=resolution_id, incident_id=verified_id,
+            root_cause_summary="Verified BGP route policy ordering issue.",
+            resolution_summary="Reverted route policy and added staged validation.",
+            verified_by="verified test engineer", verified_at=datetime.now(timezone.utc),
+        ))
+        previous.memory_events.append(MemoryOperationEvent(
+            id=uuid.uuid4(), incident_id=verified_id,
+            operation_name="retain", memory_type="resolution", status="success",
+            payload_summary=f"Verified resolution retained. resolution_id={resolution_id}",
+        ))
+        unverified_id = uuid.uuid4()
+        unverified = Incident(
+            id=unverified_id, incident_number="INC-PREV-002",
+            title="Unverified network configuration case",
+            description="Similar network routes were reported.",
+            service_name="network-routing", environment="production", severity="high",
+            status="resolved", source="api",
+        )
+        session.add_all([previous, unverified])
+        session.commit()
+        session.close()
+
+        response = self.client.get(f"/api/incidents/{self.incident_id}/precedents?limit=5")
+        self.assertEqual(response.status_code, 200, response.text)
+        data = response.json()["data"]
+        self.assertIn("TF-IDF cosine similarity per tier", data["score_method"])
+        self.assertEqual(data["verified_workspace"][0]["id"], str(verified_id))
+        self.assertEqual(data["verified_workspace"][0]["verification_status"], "verified")
+        self.assertEqual(data["verified_workspace"][0]["memory_retention_status"], "success")
+        self.assertIn("routing", data["verified_workspace"][0]["matching_signals"])
+        self.assertNotIn(str(unverified_id), [item["id"] for item in data["verified_workspace"]])
+        self.assertNotIn("cloudflare-2022-06-bgp", [item["id"] for item in data["public_library"]])
+        self.assertNotIn("CURRENT ROOT CAUSE MUST NOT BE USED", str(data))
+
+    def test_precedents_returns_not_found_for_unknown_incident(self):
+        response = self.client.get("/api/incidents/00000000-0000-0000-0000-000000000001/precedents")
+        self.assertEqual(response.status_code, 404)
 
     def test_memory_off_does_not_recall_and_investigation_can_be_retrieved(self):
         response = self.client.post(f"/api/incidents/{self.incident_id}/investigate", json={"memory_mode":"MEMORY_OFF"})
