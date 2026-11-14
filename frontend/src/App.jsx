@@ -10,6 +10,7 @@ import { hindsightBankLabel } from './providerStatus.js'
 import { parsePostmortemMarkdown } from './postmortemMarkdown.js'
 import IncidentLibrary from './IncidentLibrary.jsx'
 import PrecedentRadar from './PrecedentRadar.jsx'
+import IncidentGraph from './IncidentGraph.jsx'
 
 const API_ROOT = (import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD ? '/api' : 'http://127.0.0.1:8000/api')).replace(/\/$/, '')
 const DATA_LABEL = import.meta.env.VITE_DATA_LABEL
@@ -86,6 +87,7 @@ const navItems = [
   { id: 'investigate', label: 'Investigations', icon: Radar, group: 'Workspace' },
   { id: 'library', label: 'Incident library', icon: Database, group: 'Workspace' },
   { id: 'memory', label: 'Memory explorer', icon: BrainCircuit, group: 'Intelligence' },
+  { id: 'graph', label: 'Relationship graph', icon: Network, group: 'Intelligence' },
   { id: 'postmortem', label: 'Postmortems', icon: FileText, group: 'Intelligence' },
 ]
 
@@ -216,6 +218,7 @@ function App() {
           {page === 'dashboard' && <DashboardPage dashboard={dashboard} incidents={incidents} activities={memoryActivity} health={health} recentRuns={recentRuns} onOpenIncident={(id) => { setSelectedIncidentId(id); setPage('investigate') }} onNavigate={setPage} loading={refreshing} onRefreshHealth={refreshHealth} checkingHealth={checkingHealth} />}
           {page === 'investigate' && <InvestigationPage incidents={incidents} selectedIncidentId={selectedIncidentId} setSelectedIncidentId={setSelectedIncidentId} selectedIncident={selectedIncident} onIncidentCreated={(id) => { setSelectedIncidentId(id); reload() }} onRunCreated={onRunCreated} notify={notify} demo={demo} setDemo={setDemo} onDataChanged={reload} />}
           {page === 'library' && <IncidentLibrary requestApi={api} onInvestigate={investigateLibraryIncident} />}
+          {page === 'graph' && <IncidentGraph requestApi={api} />}
           {page === 'compare' && <ComparisonPage incidents={incidents} selectedIncidentId={selectedIncidentId} setSelectedIncidentId={setSelectedIncidentId} selectedIncident={selectedIncident} onRunCreated={onRunCreated} notify={notify} />}
           {page === 'memory' && <MemoryPage incidents={incidents} selectedIncidentId={selectedIncidentId} setSelectedIncidentId={setSelectedIncidentId} onNavigate={setPage} health={health} />}
           {page === 'postmortem' && <PostmortemPage incidents={incidents} notify={notify} onNavigate={setPage} />}

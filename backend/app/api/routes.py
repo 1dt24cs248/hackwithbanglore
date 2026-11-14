@@ -30,11 +30,13 @@ from app.schemas.investigation import (
     VerifiedResolutionInput,
 )
 from app.services.incident_library import (
+    IncidentLibraryError,
     get_incident as get_library_incident,
     investigation_submission,
     list_incidents as list_library_incidents,
     catalog_summary,
     library_categories,
+    relationship_graph,
 )
 from app.services.precedent_radar import (
     incident_query_text,
@@ -139,6 +141,19 @@ def list_library(
 @router.get("/library/summary")
 def library_summary() -> dict[str, Any]:
     return _envelope(catalog_summary(library_categories()))
+
+
+@router.get("/library/relationship-graph")
+def get_library_relationship_graph(
+    max_patterns: int = Query(default=8, ge=1, le=12),
+) -> dict[str, Any]:
+    try:
+        return _envelope(relationship_graph(max_patterns=max_patterns))
+    except IncidentLibraryError:
+        raise HTTPException(
+            status_code=503,
+            detail={"code": "LIBRARY_UNAVAILABLE", "message": "Incident library data is unavailable."},
+        ) from None
 
 
 @router.get("/library/incidents/{incident_id}")

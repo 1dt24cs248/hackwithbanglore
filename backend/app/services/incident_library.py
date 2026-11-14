@@ -7,6 +7,7 @@ from collections import Counter
 from datetime import date
 from functools import lru_cache
 from pathlib import Path
+import re
 from typing import Any
 from urllib.parse import urlparse
 
@@ -150,6 +151,125 @@ def catalog_summary(categories: list[str]) -> dict[str, Any]:
             {"category": category, "verified_incidents": category_counts.get(category, 0), "covered": category_counts.get(category, 0) > 0}
             for category in categories
         ],
+    }
+
+
+def relationship_graph(max_patterns: int = 8) -> dict[str, Any]:
+    """Build evidence-backed bipartite links from exact infrastructure/category fields."""
+    records = _load_records()
+    pattern_records: dict[tuple[str, str], dict[str, Any]] = {}
+    record_patterns: dict[str, list[tuple[str, str]]] = {}
+
+    for record in records:
+        keys: list[tuple[str, str]] = []
+        for component in record.infrastructure:
+            label = component.strip()
+            key = ("infrastructure", label.casefold())
+            if label and key not in keys:
+                keys.append(key)
+                pattern_records.setdefault(key, {"label": label, "records": []})["records"].append(record)
+        category_label = record.category.strip()
+        category_key = ("category", category_label.casefold())
+        if category_label:
+            keys.append(category_key)
+            pattern_records.setdefault(category_key, {"label": category_label, "records": []})["records"].append(record)
+        record_patterns[record.id] = keys
+
+    patterns = [
+        (key, entry)
+        for key, entry in pattern_records.items()
+        if len(entry["records"]) >= 2
+    ]
+    patterns.sort(key=lambda item: (
+        -len(item[1]["records"]),
+        0 if item[0][0] == "infrastructure" else 1,
+        item[1]["label"].casefold(),
+        item[1]["label"],
+    ))
+    patterns = patterns[:max_patterns]
+
+    def slug(value: str) -> str:
+        return re.sub(r"[^a-z0-9]+", "-", value.casefold()).strip("-") or "unnamed"
+
+    pattern_nodes: list[dict[str, Any]] = []
+    pattern_ids: dict[tuple[str, str], str] = {}
+    for key, entry in patterns:
+        pattern_type, _normalized = key
+        label = entry["label"]
+        node_id = f"{'infra' if pattern_type == 'infrastructure' else 'cat'}:{slug(label)}"
+        pattern_ids[key] = node_id
+        infrastructure = pattern_type == "infrastructure"
+        pattern_nodes.append({
+            "id": node_id,
+            "node_type": "pattern",
+            "label": label,
+            "pattern_type": pattern_type,
+            "incident_count": len(entry["records"]),
+            "relation": "shared_infrastructure" if infrastructure else "same_category",
+            "evidence_basis": "documented_infrastructure" if infrastructure else "library_category",
+        })
+
+    selected_keys = set(pattern_ids)
+    related_by_incident: dict[str, list[dict[str, Any]]] = {record.id: [] for record in records}
+    edges: list[dict[str, str]] = []
+    for key, entry in patterns:
+        pattern_type, _normalized = key
+        label = entry["label"]
+        related_records = sorted(
+            entry["records"],
+            key=lambda record: (record.incident_date, record.company.casefold(), record.id),
+        )
+        relation = "shared_infrastructure" if pattern_type == "infrastructure" else "same_category"
+        evidence_basis = "documented_infrastructure" if pattern_type == "infrastructure" else "library_category"
+        if pattern_type == "infrastructure":
+            evidence = f"Both reports list '{label}' as affected infrastructure."
+        else:
+            evidence = f"Both incidents are filed under the library category '{label}'."
+        related_ids = [record.id for record in related_records]
+        for record in related_records:
+            related_by_incident[record.id].append({
+                "relation": relation,
+                "pattern_label": label,
+                "evidence": evidence,
+                "related_incident_ids": [item for item in related_ids if item != record.id][:5],
+            })
+            edges.append({
+                "source": record.id,
+                "target": pattern_ids[key],
+                "relation": relation,
+                "evidence": evidence,
+                "evidence_basis": evidence_basis,
+            })
+
+    connected_records = [record for record in records if related_by_incident[record.id]]
+    pattern_order = {key: index for index, (key, _entry) in enumerate(patterns)}
+    connected_records.sort(key=lambda record: (
+        min(pattern_order[key] for key in record_patterns[record.id] if key in selected_keys),
+        record.title.casefold(),
+        record.id,
+    ))
+    incident_nodes = []
+    for record in connected_records:
+        source = next(iter(record.sources), None)
+        incident_nodes.append({
+            "id": record.id,
+            "node_type": "incident",
+            "title": record.title,
+            "company": record.company,
+            "incident_date": record.incident_date.isoformat(),
+            "category": record.category,
+            "technical_root_cause": record.technical_root_cause or None,
+            "source_url": str(source.url) if source else None,
+            "relationships": related_by_incident[record.id],
+        })
+
+    return {
+        "nodes": [*pattern_nodes, *incident_nodes],
+        "edges": edges,
+        "patterns_shown": len(pattern_nodes),
+        "incidents_shown": len(incident_nodes),
+        "total_library_incidents": len(records),
+        "legend_note": "Relationships come from documented infrastructure and library categories, not from similar wording. Root causes are shown for reading, not used to link incidents.",
     }
 
 
